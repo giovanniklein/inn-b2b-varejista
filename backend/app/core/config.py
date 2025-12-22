@@ -59,8 +59,8 @@ class Settings(BaseSettings):
     )
 
     class Config:
-        # Usa o `.env` que fica na raiz do monorepo compartilhado (`portal b2b/`).
-        env_file = str(REPO_ROOT_DIR / ".env")
+        # Usa o `.env` do app varejista (caminho absoluto informado).
+        env_file = r"C:\p_projetos\pinn\portal b2b\pinn-b2b-varejista\.env"
         env_file_encoding = "utf-8"
         case_sensitive = False
 
