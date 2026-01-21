@@ -22,16 +22,16 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/enderecos" element={<AddressesPage />} />
           <Route path="/produtos" element={<ProductsPage />} />
+          <Route path="/enderecos" element={<AddressesPage />} />
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/pedidos/:id" element={<OrderDetailsPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/produtos" replace />} />
     </Routes>
   );
 }

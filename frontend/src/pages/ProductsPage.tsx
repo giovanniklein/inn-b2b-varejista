@@ -12,6 +12,11 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
   Select,
   SimpleGrid,
   Spinner,
@@ -36,7 +41,7 @@ interface Produto {
   descricao: string;
   imagem_base64?: string | null;
   estoque: number;
-  precos: ProdutoPreco[];
+  precos?: ProdutoPreco[] | null;
   atacadista_id: string;
   atacadista_nome?: string | null;
 }
@@ -57,10 +62,12 @@ const unidadeLabel: Record<string, string> = {
 
 const formatUnidade = (value: string) => unidadeLabel[value] ?? value;
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-    value,
+const formatCurrency = (value: number | null | undefined) => {
+  const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    safeValue,
   );
+};
 
 export function ProductsPage() {
   const [data, setData] = useState<ProdutoListResponse | null>(null);
@@ -122,8 +129,9 @@ export function ProductsPage() {
     setSelectedUnitById((prev) => {
       const next = { ...prev };
       for (const produto of data.items) {
-        if (!next[produto.id] && produto.precos.length > 0) {
-          next[produto.id] = produto.precos[0].unidade;
+        const precos = Array.isArray(produto.precos) ? produto.precos : [];
+        if (!next[produto.id] && precos.length > 0) {
+          next[produto.id] = precos[0].unidade;
         }
       }
       return next;
@@ -159,7 +167,8 @@ export function ProductsPage() {
   );
 
   const handleAdicionarAoCarrinho = async (produto: Produto) => {
-    const unidade = selectedUnitById[produto.id] ?? produto.precos[0]?.unidade ?? null;
+    const precos = Array.isArray(produto.precos) ? produto.precos : [];
+    const unidade = selectedUnitById[produto.id] ?? precos[0]?.unidade ?? null;
     const quantidade = selectedQtyById[produto.id] ?? 1;
 
     if (!unidade) {
@@ -310,7 +319,7 @@ export function ProductsPage() {
                     </Text>
 
                     <Stack spacing={1} fontSize="sm">
-                      {produto.precos.length > 0 ? (
+                      {Array.isArray(produto.precos) && produto.precos.length > 0 ? (
                         produto.precos.map((preco) => (
                           <Text key={preco.unidade}>
                             <strong>{formatUnidade(preco.unidade)}:</strong>{' '}
@@ -323,7 +332,7 @@ export function ProductsPage() {
                         </Text>
                       )}
                       <Text fontSize="xs" color="gray.500">
-                        Estoque disponivel: {produto.estoque}
+                        Estoque disponivel: {produto.estoque ?? 0}
                       </Text>
                     </Stack>
 
@@ -334,16 +343,20 @@ export function ProductsPage() {
                         </Text>
                         <Select
                           size="sm"
-                          value={selectedUnitById[produto.id] ?? produto.precos[0]?.unidade ?? ''}
+                          value={
+                            selectedUnitById[produto.id] ??
+                            (Array.isArray(produto.precos) ? produto.precos[0]?.unidade : '') ??
+                            ''
+                          }
                           onChange={(e) =>
                             setSelectedUnitById((prev) => ({
                               ...prev,
                               [produto.id]: e.target.value as UnidadeTipo,
                             }))
                           }
-                          isDisabled={produto.precos.length === 0}
+                          isDisabled={!Array.isArray(produto.precos) || produto.precos.length === 0}
                         >
-                          {produto.precos.map((preco) => (
+                          {(Array.isArray(produto.precos) ? produto.precos : []).map((preco) => (
                             <option key={preco.unidade} value={preco.unidade}>
                               {formatUnidade(preco.unidade)}
                             </option>
@@ -354,22 +367,26 @@ export function ProductsPage() {
                         <Text fontSize="xs" color="gray.500" mb={1}>
                           Quantidade
                         </Text>
-                        <Select
+                        <NumberInput
                           size="sm"
+                          min={1}
+                          max={100}
                           value={selectedQtyById[produto.id] ?? 1}
-                          onChange={(e) =>
+                          onChange={(_, valueAsNumber) =>
                             setSelectedQtyById((prev) => ({
                               ...prev,
-                              [produto.id]: Number(e.target.value),
+                              [produto.id]: Number.isFinite(valueAsNumber)
+                                ? valueAsNumber
+                                : 1,
                             }))
                           }
                         >
-                          {Array.from({ length: 100 }).map((_, idx) => (
-                            <option key={idx + 1} value={idx + 1}>
-                              {idx + 1}
-                            </option>
-                          ))}
-                        </Select>
+                          <NumberInputField />
+                          <NumberInputStepper>
+                            <NumberIncrementStepper />
+                            <NumberDecrementStepper />
+                          </NumberInputStepper>
+                        </NumberInput>
                       </Box>
                     </SimpleGrid>
 
@@ -388,10 +405,13 @@ export function ProductsPage() {
                         {(() => {
                           const unidade =
                             selectedUnitById[produto.id] ??
-                            produto.precos[0]?.unidade ??
+                            (Array.isArray(produto.precos)
+                              ? produto.precos[0]?.unidade
+                              : '') ??
                             '';
                           const quantidade = selectedQtyById[produto.id] ?? 1;
-                          const precoSelecionado = produto.precos.find(
+                          const precos = Array.isArray(produto.precos) ? produto.precos : [];
+                          const precoSelecionado = precos.find(
                             (preco) => preco.unidade === unidade,
                           );
                           const total = (precoSelecionado?.preco ?? 0) * quantidade;
@@ -405,7 +425,7 @@ export function ProductsPage() {
                       colorScheme="brand"
                       size="sm"
                       onClick={() => handleAdicionarAoCarrinho(produto)}
-                      isDisabled={produto.precos.length === 0}
+                      isDisabled={!Array.isArray(produto.precos) || produto.precos.length === 0}
                     >
                       Adicionar ao carrinho
                     </Button>

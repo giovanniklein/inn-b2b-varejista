@@ -5,6 +5,11 @@ import {
   Divider,
   Flex,
   HStack,
+  NumberDecrementStepper,
+  NumberIncrementStepper,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
   Select,
   SimpleGrid,
   Stack,
@@ -64,8 +69,12 @@ interface FinalizarCarrinhoResponse {
   }[];
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+const formatCurrency = (value: number | null | undefined) => {
+  const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    safeValue,
+  );
+};
 
 const formatUnidade = (value: string) => {
   if (!value) return value;
@@ -200,6 +209,33 @@ export function CartPage() {
     }));
   };
 
+  const getEnderecoPadraoId = () => {
+    if (!enderecos.length) return null;
+    const principal = enderecos.find((endereco) => endereco.eh_principal);
+    return principal?.id ?? enderecos[0].id;
+  };
+
+  useEffect(() => {
+    if (!enderecos.length) return;
+    const enderecoPadraoId = getEnderecoPadraoId();
+    if (!enderecoPadraoId) return;
+
+    const atacadistas = Object.keys(itensAgrupadosPorAtacadista);
+    if (!atacadistas.length) return;
+
+    setEnderecosSelecionados((prev) => {
+      const next = { ...prev };
+      for (const atacadistaId of atacadistas) {
+        const current = next[atacadistaId];
+        const exists = enderecos.some((endereco) => endereco.id === current);
+        if (!current || !exists) {
+          next[atacadistaId] = enderecoPadraoId;
+        }
+      }
+      return next;
+    });
+  }, [enderecos, itensAgrupadosPorAtacadista]);
+
   const handleFinalizar = async () => {
     if (!carrinho || !carrinho.itens.length) {
       toast({
@@ -211,24 +247,26 @@ export function CartPage() {
       return;
     }
 
-    const atacadistas = Object.keys(itensAgrupadosPorAtacadista);
-    for (const atacadistaId of atacadistas) {
-      if (!enderecosSelecionados[atacadistaId]) {
-        toast({
-          title: 'Selecione o endereco de entrega',
-          description: `Selecione um endereco para o atacadista ${atacadistaId}.`,
-          status: 'warning',
-          duration: 4000,
-          isClosable: true,
-        });
-        return;
-      }
+    if (!enderecos.length) {
+      toast({
+        title: 'Cadastre um endereco',
+        description: 'Cadastre ao menos um endereco de entrega para finalizar o pedido.',
+        status: 'warning',
+        duration: 4000,
+        isClosable: true,
+      });
+      return;
     }
 
+    const atacadistas = Object.keys(itensAgrupadosPorAtacadista);
+    const enderecoPadraoId = getEnderecoPadraoId();
+    const enderecosPayload = atacadistas.map((atacadistaId) => ({
+      atacadista_id: atacadistaId,
+      endereco_id: enderecosSelecionados[atacadistaId] ?? enderecoPadraoId ?? '',
+    }));
+
     const payload = {
-      enderecos: Object.entries(enderecosSelecionados).map(
-        ([atacadista_id, endereco_id]) => ({ atacadista_id, endereco_id }),
-      ),
+      enderecos: enderecosPayload,
     };
 
     try {
@@ -311,11 +349,11 @@ export function CartPage() {
                 </Text>
                 <Select
                   size="sm"
-                  placeholder="Selecione o endereco"
                   value={enderecosSelecionados[atacadistaId] ?? ''}
                   onChange={(e) => handleSelecionarEndereco(atacadistaId, e.target.value)}
                   w={{ base: 'full', md: '320px' }}
                   maxW={{ base: 'full', md: '320px' }}
+                  isDisabled={enderecos.length <= 1}
                 >
                   {enderecos.map((endereco) => (
                     <option key={endereco.id} value={endereco.id}>
@@ -369,23 +407,25 @@ export function CartPage() {
                       <Text fontSize="xs" color="gray.500" mb={1}>
                         Quantidade
                       </Text>
-                      <Select
+                      <NumberInput
                         size="sm"
+                        min={1}
+                        max={100}
                         value={item.quantidade}
-                        onChange={(e) =>
+                        onChange={(_, valueAsNumber) =>
                           handleAlterarItem(
                             item.produto_id,
-                            Number(e.target.value),
+                            Number.isFinite(valueAsNumber) ? valueAsNumber : 1,
                             item.unidade_medida,
                           )
                         }
                       >
-                        {Array.from({ length: 100 }).map((_, idx) => (
-                          <option key={idx + 1} value={idx + 1}>
-                            {idx + 1}
-                          </option>
-                        ))}
-                      </Select>
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
                     </Box>
                     <Box>
                       <Text fontSize="xs" color="gray.500" mb={1}>
@@ -456,24 +496,26 @@ export function CartPage() {
                       </Select>
                     </Td>
                     <Td isNumeric>
-                      <Select
+                      <NumberInput
                         size="sm"
+                        min={1}
+                        max={100}
                         value={item.quantidade}
-                        onChange={(e) =>
+                        onChange={(_, valueAsNumber) =>
                           handleAlterarItem(
                             item.produto_id,
-                            Number(e.target.value),
+                            Number.isFinite(valueAsNumber) ? valueAsNumber : 1,
                             item.unidade_medida,
                           )
                         }
                         maxW="100px"
                       >
-                        {Array.from({ length: 100 }).map((_, idx) => (
-                          <option key={idx + 1} value={idx + 1}>
-                            {idx + 1}
-                          </option>
-                        ))}
-                      </Select>
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
                     </Td>
                     <Td isNumeric>{formatCurrency(item.preco_unitario)}</Td>
                     <Td isNumeric>{formatCurrency(item.subtotal)}</Td>

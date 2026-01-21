@@ -57,8 +57,12 @@ interface PedidoDetailResponse {
   itens: PedidoItem[];
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+const formatCurrency = (value: number | null | undefined) => {
+  const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+    safeValue,
+  );
+};
 
 const formatDate = (value: string) => new Date(value).toLocaleString('pt-BR');
 

@@ -92,19 +92,19 @@ export function MainLayout() {
             py={{ base: 1, md: 0 }}
           >
             <WrapItem>
-              <NavLink to="/dashboard">Dashboard</NavLink>
-            </WrapItem>
-            <WrapItem>
               <NavLink to="/produtos">Produtos</NavLink>
-            </WrapItem>
-            <WrapItem>
-              <NavLink to="/enderecos">Enderecos</NavLink>
             </WrapItem>
             <WrapItem>
               <NavLink to="/carrinho">Carrinho</NavLink>
             </WrapItem>
             <WrapItem>
               <NavLink to="/pedidos">Pedidos</NavLink>
+            </WrapItem>
+            <WrapItem>
+              <NavLink to="/dashboard">Dashboard</NavLink>
+            </WrapItem>
+            <WrapItem>
+              <NavLink to="/enderecos">Enderecos</NavLink>
             </WrapItem>
           </Wrap>
 
