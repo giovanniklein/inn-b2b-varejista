@@ -9,6 +9,7 @@ import { CartPage } from './pages/CartPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { OrderDetailsPage } from './pages/OrderDetailsPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/produtos" element={<ProductsPage />} />
           <Route path="/enderecos" element={<AddressesPage />} />
+          <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/pedidos/:id" element={<OrderDetailsPage />} />

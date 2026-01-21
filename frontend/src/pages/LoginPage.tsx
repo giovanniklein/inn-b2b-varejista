@@ -32,6 +32,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSession = useAuthStore((s) => s.setSession);
+  const setMe = useAuthStore((s) => s.setMe);
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
     try {
@@ -42,6 +43,12 @@ export function LoginPage() {
       });
 
       setSession(data);
+      try {
+        const { data: me } = await api.get('/auth/me');
+        setMe(me);
+      } catch {
+        // If the profile fetch fails, keep the session and let the app retry later.
+      }
 
       toast({
         title: 'Login realizado com sucesso',

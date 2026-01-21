@@ -1,5 +1,6 @@
 ﻿import { ReactNode } from 'react';
 import {
+  Avatar,
   Box,
   Button,
   Flex,
@@ -7,6 +8,10 @@ import {
   HStack,
   IconButton,
   Link as ChakraLink,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Spacer,
   Text,
   useColorMode,
@@ -103,9 +108,6 @@ export function MainLayout() {
             <WrapItem>
               <NavLink to="/dashboard">Dashboard</NavLink>
             </WrapItem>
-            <WrapItem>
-              <NavLink to="/enderecos">Enderecos</NavLink>
-            </WrapItem>
           </Wrap>
 
           <Spacer display={{ base: 'none', md: 'block' }} />
@@ -134,6 +136,24 @@ export function MainLayout() {
             )}
 
             <HStack spacing={2}>
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<Avatar size="xs" name={user?.nome ?? 'Perfil'} />}
+                >
+                  Perfil
+                </MenuButton>
+                <MenuList>
+                  <MenuItem as={Link} to="/perfil">
+                    Meu perfil
+                  </MenuItem>
+                  <MenuItem as={Link} to="/enderecos">
+                    Enderecos
+                  </MenuItem>
+                </MenuList>
+              </Menu>
               <IconButton
                 aria-label="Alternar tema"
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

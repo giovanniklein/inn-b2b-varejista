@@ -18,6 +18,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: UserInfo | null;
+  varejistaRazaoSocial: string | null;
   varejistaNomeFantasia: string | null;
   isAuthenticated: boolean;
   setSession: (tokens: { access_token: string; refresh_token: string; expires_in?: number }) => void;
@@ -29,6 +30,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: localStorage.getItem('pinn_varejista_access_token'),
   refreshToken: localStorage.getItem('pinn_varejista_refresh_token'),
   user: null,
+  varejistaRazaoSocial: null,
   varejistaNomeFantasia: null,
   isAuthenticated: !!localStorage.getItem('pinn_varejista_access_token'),
 
@@ -46,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setMe: (me) => {
     set({
       user: me.user,
+      varejistaRazaoSocial: me.varejista_razao_social ?? null,
       varejistaNomeFantasia: me.varejista_nome_fantasia ?? me.varejista_razao_social ?? null,
     });
   },
@@ -58,6 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: null,
       refreshToken: null,
       user: null,
+      varejistaRazaoSocial: null,
       varejistaNomeFantasia: null,
       isAuthenticated: false,
     });
