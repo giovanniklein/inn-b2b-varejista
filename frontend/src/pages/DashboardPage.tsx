@@ -106,8 +106,8 @@ export function DashboardPage() {
     try {
       setIsLoading(true);
       const [pedidosResp, carrinhoResp] = await Promise.all([
-        api.get<PedidoListResponse>('/pedidos', { params: { page: 1, page_size: 10 } }),
-        api.get<CarrinhoResponse>('/carrinho'),
+        api.get<PedidoListResponse>('/pedidos/', { params: { page: 1, page_size: 10 } }),
+        api.get<CarrinhoResponse>('/carrinho/'),
       ]);
 
       setPedidos(pedidosResp.data.items ?? []);

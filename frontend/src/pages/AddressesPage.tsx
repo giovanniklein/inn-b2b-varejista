@@ -71,7 +71,7 @@ export function AddressesPage() {
   const loadEnderecos = async () => {
     setIsLoading(true);
     try {
-      const { data } = await api.get<EnderecoListResponse>('/enderecos');
+      const { data } = await api.get<EnderecoListResponse>('/enderecos/');
       setEnderecos(data.items);
     } catch (err: any) {
       const message =
@@ -137,7 +137,7 @@ export function AddressesPage() {
         });
         setEnderecos((prev) => prev.map((e) => (e.id === data.id ? data : e)));
       } else {
-        const { data } = await api.post<Endereco>('/enderecos', values);
+        const { data } = await api.post<Endereco>('/enderecos/', values);
         toast({
           title: 'Endereço criado com sucesso',
           status: 'success',

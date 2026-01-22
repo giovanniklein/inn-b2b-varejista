@@ -107,7 +107,7 @@ export function OrdersPage() {
   const carregarPedidos = async () => {
     try {
       setIsLoading(true);
-      const { data } = await api.get<PedidoListResponse>('/pedidos', {
+      const { data } = await api.get<PedidoListResponse>('/pedidos/', {
         params: {
           page,
           page_size: pageSize,

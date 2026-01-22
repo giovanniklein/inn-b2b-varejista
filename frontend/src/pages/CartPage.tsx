@@ -94,7 +94,7 @@ export function CartPage() {
 
   const loadCarrinho = async () => {
     try {
-      const { data } = await api.get<CarrinhoResponse>('/carrinho');
+      const { data } = await api.get<CarrinhoResponse>('/carrinho/');
       setCarrinho(data);
     } catch (err: any) {
       const message =
@@ -111,7 +111,7 @@ export function CartPage() {
 
   const loadEnderecos = async () => {
     try {
-      const { data } = await api.get<EnderecoListResponse>('/enderecos');
+      const { data } = await api.get<EnderecoListResponse>('/enderecos/');
       setEnderecos(data.items);
     } catch (err: any) {
       const message =
