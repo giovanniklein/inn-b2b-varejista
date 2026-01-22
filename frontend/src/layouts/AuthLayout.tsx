@@ -9,7 +9,7 @@ export function AuthLayout() {
       <Container maxW="lg">
         <Box textAlign="center" mb={8}>
           <Heading size="lg" mb={2}>
-            PINN B2B - Varejista
+            PINN B2B Cliente
           </Heading>
           <Text color="gray.500">Portal do varejista para compras em múltiplos atacadistas.</Text>
         </Box>

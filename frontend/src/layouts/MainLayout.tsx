@@ -73,28 +73,32 @@ export function MainLayout() {
         borderBottomWidth="1px"
         borderColor={borderColor}
         bg={headerBg}
-        px={{ base: 4, md: 6 }}
-        py={{ base: 3, md: 3 }}
+        px={{ base: 3, md: 6 }}
+        py={{ base: 2, md: 3 }}
       >
         <Flex
           align={{ base: 'flex-start', md: 'center' }}
           direction={{ base: 'column', md: 'row' }}
-          gap={{ base: 3, md: 0 }}
+          gap={{ base: 2, md: 0 }}
         >
           <Box>
-            <Heading size={{ base: 'sm', md: 'md' }}>PINN B2B - Varejista</Heading>
-            <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.500">
+            <Heading size={{ base: 'sm', md: 'md' }}>PINN B2B Cliente</Heading>
+            <Text
+              fontSize={{ base: 'xs', md: 'sm' }}
+              color="gray.500"
+              display={{ base: 'none', md: 'block' }}
+            >
               {varejistaNomeFantasia ?? 'Portal do varejista'}
             </Text>
           </Box>
 
           <Wrap
-            spacing={{ base: 1, md: 3 }}
+            spacing={{ base: 2, md: 3 }}
             ml={{ base: 0, md: 10 }}
             as="nav"
             w={{ base: 'full', md: 'auto' }}
             shouldWrapChildren
-            py={{ base: 1, md: 0 }}
+            py={{ base: 0, md: 0 }}
           >
             <WrapItem>
               <NavLink to="/produtos">Produtos</NavLink>
@@ -116,11 +120,11 @@ export function MainLayout() {
             w={{ base: 'full', md: 'auto' }}
             justify={{ base: 'space-between', md: 'flex-end' }}
             align="center"
-            gap={{ base: 2, md: 3 }}
-            mt={{ base: 1, md: 0 }}
+            gap={{ base: 1, md: 3 }}
+            mt={{ base: 0, md: 0 }}
           >
             {user && (
-              <Box textAlign="left">
+              <Box textAlign="left" display={{ base: 'none', md: 'block' }}>
                 <Text fontSize="sm" fontWeight="medium" noOfLines={1}>
                   {user.nome}
                 </Text>
@@ -140,17 +144,14 @@ export function MainLayout() {
                 <MenuButton
                   as={Button}
                   variant="ghost"
-                  size="sm"
+                  size={{ base: 'xs', md: 'sm' }}
                   leftIcon={<Avatar size="xs" name={user?.nome ?? 'Perfil'} />}
                 >
-                  Perfil
+                  <Text display={{ base: 'none', md: 'inline' }}>Perfil</Text>
                 </MenuButton>
                 <MenuList>
                   <MenuItem as={Link} to="/perfil">
                     Meu perfil
-                  </MenuItem>
-                  <MenuItem as={Link} to="/enderecos">
-                    Enderecos
                   </MenuItem>
                 </MenuList>
               </Menu>
@@ -159,9 +160,13 @@ export function MainLayout() {
                 icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
                 onClick={toggleColorMode}
                 variant="ghost"
-                size="sm"
+                size={{ base: 'xs', md: 'sm' }}
               />
-              <Button onClick={handleLogout} variant="outline" size="sm">
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size={{ base: 'xs', md: 'sm' }}
+              >
                 Sair
               </Button>
             </HStack>

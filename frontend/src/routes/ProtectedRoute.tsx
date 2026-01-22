@@ -16,8 +16,11 @@ export function ProtectedRoute() {
       try {
         const { data } = await api.get('/auth/me');
         setMe(data);
-      } catch {
-        clearSession();
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          clearSession();
+        }
       }
     };
 

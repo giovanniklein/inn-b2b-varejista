@@ -43,6 +43,7 @@ export function LoginPage() {
       });
 
       setSession(data);
+      api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`;
       try {
         const { data: me } = await api.get('/auth/me');
         setMe(me);

@@ -216,7 +216,7 @@ export function ProductsPage() {
       <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} mb={6} gap={4}>
         <Box>
           <Text fontSize="2xl" fontWeight="bold">
-            Catalogo de produtos
+            Catalogo
           </Text>
           <Text color="gray.500" fontSize="sm">
             Visualize produtos de todos os atacadistas e monte seu carrinho unificado.

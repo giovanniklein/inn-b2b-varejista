@@ -155,7 +155,7 @@ export function DashboardPage() {
       <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} mb={6} gap={4}>
         <Box>
           <Text fontSize="2xl" fontWeight="bold">
-            Dashboard do comprador
+            Dashboard
           </Text>
           <Text color="gray.500" fontSize="sm">
             Resumo rapido para abastecer o mercado com mais controle.
@@ -283,10 +283,7 @@ export function DashboardPage() {
                 onClick={() => navigate('/produtos')}
                 justifyContent="space-between"
               >
-                Comprar produtos
-                <Text fontSize="xs" color="gray.500">
-                  Escolha unidade e quantidade
-                </Text>
+                Comprar Produtos
               </Button>
               <Button
                 variant="outline"
@@ -294,19 +291,6 @@ export function DashboardPage() {
                 justifyContent="space-between"
               >
                 Revisar carrinho
-                <Text fontSize="xs" color="gray.500">
-                  Ajuste unidades e endereco
-                </Text>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/enderecos')}
-                justifyContent="space-between"
-              >
-                Enderecos de entrega
-                <Text fontSize="xs" color="gray.500">
-                  Atualize o principal
-                </Text>
               </Button>
             </Stack>
           </Box>

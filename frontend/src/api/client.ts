@@ -9,6 +9,36 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+const getStoredToken = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setStoredToken = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage may be unavailable in some mobile/private modes.
+  }
+};
+
+const removeStoredToken = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Storage may be unavailable in some mobile/private modes.
+  }
+};
+
+const getAccessToken = () =>
+  useAuthStore.getState().accessToken ?? getStoredToken('pinn_varejista_access_token');
+
+const getRefreshToken = () =>
+  useAuthStore.getState().refreshToken ?? getStoredToken('pinn_varejista_refresh_token');
+
 let isRefreshing = false;
 let failedQueue: {
   resolve: (value?: unknown) => void;
@@ -28,7 +58,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 api.interceptors.request.use((config) => {
-  const accessToken = localStorage.getItem('pinn_varejista_access_token');
+  const accessToken = getAccessToken();
 
   // Controle de loader global
   useUiStore.getState().increment();
@@ -68,12 +98,14 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('pinn_varejista_refresh_token');
+      const refreshToken = getRefreshToken();
       if (!refreshToken) {
         isRefreshing = false;
 
-        // Sem refresh token, encerramos sessão imediatamente
+        // Sem refresh token, encerramos sessao imediatamente
         useAuthStore.getState().clearSession();
+        removeStoredToken('pinn_varejista_access_token');
+        removeStoredToken('pinn_varejista_refresh_token');
         window.location.href = '/login';
 
         return Promise.reject(error);
@@ -82,8 +114,9 @@ api.interceptors.response.use(
       try {
         const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken });
 
-        localStorage.setItem('pinn_varejista_access_token', data.access_token);
-        localStorage.setItem('pinn_varejista_refresh_token', data.refresh_token);
+        setStoredToken('pinn_varejista_access_token', data.access_token);
+        setStoredToken('pinn_varejista_refresh_token', data.refresh_token);
+        useAuthStore.getState().setSession(data);
 
         api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`;
         processQueue(null, data.access_token);
@@ -94,8 +127,10 @@ api.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
 
-        // Falha ao renovar token -> limpar sessão e voltar para login
+        // Falha ao renovar token -> limpar sessao e voltar para login
         useAuthStore.getState().clearSession();
+        removeStoredToken('pinn_varejista_access_token');
+        removeStoredToken('pinn_varejista_refresh_token');
         window.location.href = '/login';
 
         return Promise.reject(err);
