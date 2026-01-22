@@ -92,6 +92,8 @@ export function MainLayout() {
             </Text>
           </Box>
 
+          <Spacer display={{ base: 'none', md: 'block' }} />
+
           <Flex
             order={{ base: 2, md: 3 }}
             w={{ base: 'full', md: 'auto' }}
