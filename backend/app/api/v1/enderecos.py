@@ -24,6 +24,7 @@ DbDep = Annotated[AsyncIOMotorDatabase, Depends(get_database)]
 VarejistaIdDep = Annotated[str, Depends(get_current_varejista_id)]
 
 
+@router.get("", response_model=EnderecoListResponse)
 @router.get("/", response_model=EnderecoListResponse)
 async def listar_enderecos(
     db: DbDep,
@@ -33,6 +34,7 @@ async def listar_enderecos(
     return await service.listar_enderecos(varejista_id)
 
 
+@router.post("", response_model=EnderecoResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=EnderecoResponse, status_code=status.HTTP_201_CREATED)
 async def criar_endereco(
     payload: EnderecoCreate,

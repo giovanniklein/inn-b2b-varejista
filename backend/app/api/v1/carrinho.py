@@ -24,6 +24,7 @@ DbDep = Annotated[AsyncIOMotorDatabase, Depends(get_database)]
 VarejistaIdDep = Annotated[str, Depends(get_current_varejista_id)]
 
 
+@router.get("", response_model=CarrinhoResponse)
 @router.get("/", response_model=CarrinhoResponse)
 async def obter_carrinho(
     db: DbDep,
