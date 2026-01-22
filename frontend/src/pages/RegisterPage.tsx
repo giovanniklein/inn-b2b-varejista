@@ -219,8 +219,8 @@ export function RegisterPage() {
         </Box>
 
         <VStack align="stretch" spacing={6}>
-          <HStack align="flex-end" spacing={3}>
-            <FormControl flex="1" isInvalid={!!errors.cnpj}>
+          <Stack direction={{ base: 'column', md: 'row' }} align="flex-end" spacing={3}>
+            <FormControl flex="1" w="full" isInvalid={!!errors.cnpj}>
               <FormLabel>CNPJ</FormLabel>
               <Input
                 placeholder="00.000.000/0001-91"
@@ -234,10 +234,11 @@ export function RegisterPage() {
               isLoading={isFetchingCnpj}
               colorScheme="brand"
               flexShrink={0}
+              w={{ base: 'full', md: 'auto' }}
             >
               Buscar dados do CNPJ
             </Button>
-          </HStack>
+          </Stack>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             <Stack spacing={6}>

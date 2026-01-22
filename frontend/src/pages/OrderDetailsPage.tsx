@@ -66,6 +66,12 @@ const formatCurrency = (value: number | null | undefined) => {
 
 const formatDate = (value: string) => new Date(value).toLocaleString('pt-BR');
 
+const formatPedidoCodigo = (id?: string) => {
+  if (!id) return 'PED-';
+  const suffix = id.slice(-6).toUpperCase();
+  return `PED-${suffix}`;
+};
+
 function StatusBadge({ status }: { status: PedidoStatus }) {
   const colorScheme =
     status === 'pendente'
@@ -172,7 +178,7 @@ export function OrderDetailsPage() {
       <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} mb={4} gap={3}>
         <Box>
           <Text fontSize="2xl" fontWeight="bold">
-            Pedido {pedido?.id}
+            Pedido {formatPedidoCodigo(pedido?.id)}
           </Text>
           <Text fontSize="sm" color="gray.500">
             Detalhes do pedido enviado para o atacadista.
@@ -183,9 +189,10 @@ export function OrderDetailsPage() {
           colorScheme="brand"
           onClick={duplicarPedido}
           isLoading={isDuplicating}
-          alignSelf={{ base: 'flex-start', md: 'center' }}
+          alignSelf={{ base: 'stretch', md: 'center' }}
+          w={{ base: 'full', md: 'auto' }}
         >
-          Duplicar pedido
+          Duplicar
         </Button>
       </Flex>
 

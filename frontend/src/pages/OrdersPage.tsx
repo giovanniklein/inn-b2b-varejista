@@ -62,6 +62,12 @@ const formatCurrency = (value: number | null | undefined) => {
 
 const formatDate = (value: string) => new Date(value).toLocaleString('pt-BR');
 
+const formatPedidoCodigo = (id?: string) => {
+  if (!id) return 'PED-';
+  const suffix = id.slice(-6).toUpperCase();
+  return `PED-${suffix}`;
+};
+
 function StatusBadge({ status }: { status: PedidoStatus }) {
   const colorScheme =
     status === 'pendente'
@@ -223,6 +229,9 @@ export function OrdersPage() {
                   </HStack>
                   <Text fontWeight="semibold">{formatCurrency(pedido.valor_total)}</Text>
                   <Text fontSize="xs" color="gray.500">
+                    Pedido {formatPedidoCodigo(pedido.id)}
+                  </Text>
+                  <Text fontSize="xs" color="gray.500">
                     {formatDate(pedido.data_criacao)}
                   </Text>
                   <Text fontSize="sm" mt={2} noOfLines={2}>
@@ -268,6 +277,9 @@ export function OrdersPage() {
                         <Badge colorScheme="purple">
                           {pedido.atacadista_nome ?? pedido.atacadista_id}
                         </Badge>
+                        <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                          {formatPedidoCodigo(pedido.id)}
+                        </Text>
                       </HStack>
                     </Td>
                     <Td>

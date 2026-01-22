@@ -81,7 +81,7 @@ export function MainLayout() {
           direction={{ base: 'column', md: 'row' }}
           gap={{ base: 2, md: 0 }}
         >
-          <Box>
+          <Box order={{ base: 1, md: 1 }}>
             <Heading size={{ base: 'sm', md: 'md' }}>PINN B2B Cliente</Heading>
             <Text
               fontSize={{ base: 'xs', md: 'sm' }}
@@ -92,33 +92,10 @@ export function MainLayout() {
             </Text>
           </Box>
 
-          <Wrap
-            spacing={{ base: 2, md: 3 }}
-            ml={{ base: 0, md: 10 }}
-            as="nav"
-            w={{ base: 'full', md: 'auto' }}
-            shouldWrapChildren
-            py={{ base: 0, md: 0 }}
-          >
-            <WrapItem>
-              <NavLink to="/produtos">Produtos</NavLink>
-            </WrapItem>
-            <WrapItem>
-              <NavLink to="/carrinho">Carrinho</NavLink>
-            </WrapItem>
-            <WrapItem>
-              <NavLink to="/pedidos">Pedidos</NavLink>
-            </WrapItem>
-            <WrapItem>
-              <NavLink to="/dashboard">Dashboard</NavLink>
-            </WrapItem>
-          </Wrap>
-
-          <Spacer display={{ base: 'none', md: 'block' }} />
-
           <Flex
+            order={{ base: 2, md: 3 }}
             w={{ base: 'full', md: 'auto' }}
-            justify={{ base: 'space-between', md: 'flex-end' }}
+            justify={{ base: 'flex-end', md: 'flex-end' }}
             align="center"
             gap={{ base: 1, md: 3 }}
             mt={{ base: 0, md: 0 }}
@@ -171,6 +148,29 @@ export function MainLayout() {
               </Button>
             </HStack>
           </Flex>
+
+          <Wrap
+            order={{ base: 3, md: 2 }}
+            spacing={{ base: 2, md: 3 }}
+            ml={{ base: 0, md: 10 }}
+            as="nav"
+            w={{ base: 'full', md: 'auto' }}
+            shouldWrapChildren
+            py={{ base: 0, md: 0 }}
+          >
+            <WrapItem>
+              <NavLink to="/produtos">Produtos</NavLink>
+            </WrapItem>
+            <WrapItem>
+              <NavLink to="/carrinho">Carrinho</NavLink>
+            </WrapItem>
+            <WrapItem>
+              <NavLink to="/pedidos">Pedidos</NavLink>
+            </WrapItem>
+            <WrapItem>
+              <NavLink to="/dashboard">Dashboard</NavLink>
+            </WrapItem>
+          </Wrap>
         </Flex>
       </Box>
 

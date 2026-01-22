@@ -223,7 +223,12 @@ export function ProductsPage() {
           </Text>
         </Box>
 
-        <Box as="form" onSubmit={handleSearchSubmit} maxW={{ base: '100%', md: '360px' }}>
+        <Box
+          as="form"
+          onSubmit={handleSearchSubmit}
+          maxW={{ base: '100%', md: '480px' }}
+          w={{ base: '100%', md: 'auto' }}
+        >
           <InputGroup size="md">
             <InputLeftElement pointerEvents="none">
               <SearchIcon color="gray.400" />
