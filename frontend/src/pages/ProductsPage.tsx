@@ -172,7 +172,7 @@ export function ProductsPage() {
             lineHeight="short"
             noOfLines={1}
           >
-            A KIPI conecta voce aos melhores produtos
+            Destaques da Semana
           </Text>
           <Text color="gray.500" fontSize="sm">
             Toque na foto para abrir os detalhes e comprar.
