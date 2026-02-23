@@ -1,53 +1,148 @@
-# PINN B2B Cliente (Varejista)
+# KIPI B2B - Portal Varejista
 
-Este arquivo é o **manual técnico e funcional** do app do varejista.  
-Use este README como fonte rápida de contexto para manutenção, deploy e operação.
+Manual tecnico e funcional do app do varejista.
+Use este README como fonte de contexto para manutencao, deploy e operacao.
 
 ---
 
-## Visão geral do produto
+## Visao geral
 
-Portal B2B para **varejistas** comprarem de múltiplos atacadistas.
+Portal B2B para varejistas comprarem de multiplos atacadistas em um unico app.
 
-Objetivos principais:
-- Vitrine única de produtos (somente leitura).
-- Carrinho multi‑atacadista.
-- Geração de múltiplos pedidos na finalização.
-- Endereços de entrega gerenciados pelo varejista.
-- Autenticação com JWT (access + refresh).
+Principais objetivos:
+- Catalogo unificado de produtos (multi-atacadista).
+- Fluxo mobile-first para descoberta e compra.
+- Carrinho multi-atacadista.
+- Fechamento com multiplos pedidos (1 pedido por atacadista).
+- Selecao de endereco e condicao de pagamento por atacadista.
+- Historico de pedidos com PDF e compartilhamento.
+- Autenticacao JWT (access + refresh).
+
+---
+
+## Branding
+
+A identidade visual atual do app e **KIPI**.
+
+Aplicado em:
+- `frontend/src/layouts/AuthLayout.tsx`
+- `frontend/src/layouts/MainLayout.tsx`
+- `frontend/public/logo.jpeg`
 
 ---
 
 ## Arquitetura
 
-- **Backend**: `backend/`
+- Backend: `backend/`
   - FastAPI + Motor (MongoDB)
   - Pydantic / pydantic-settings
-  - JWT com `tipo_usuario="varejista"` + `varejista_id` no payload
-  - Multi‑tenant por `varejista_id` (sempre extraído do token)
-- **Frontend**: `frontend/`
+  - JWT com `tipo_usuario="varejista"` e `varejista_id` no payload
+  - Multi-tenant por `varejista_id` (sempre derivado do token)
+
+- Frontend: `frontend/`
   - React + Vite + Chakra UI
-  - Axios interceptors com refresh automático
-  - Zustand (auth store + UI store)
   - React Router v6
+  - Zustand (auth/UI store)
+  - Axios interceptors com refresh automatico de token
 
-Backends **varejista** e **atacadista** são independentes, mas compartilham o **mesmo MongoDB**.
-
----
-
-## Pastas importantes
-
-- `backend/app/api/v1/` – rotas REST
-- `backend/app/services/` – regras de negócio
-- `backend/app/schemas/` – modelos pydantic
-- `backend/app/utils/dependencies.py` – extração do usuário/varejista via JWT
-- `frontend/src/api/client.ts` – axios, auth e refresh
-- `frontend/src/store/authStore.ts` – sessão no front
-- `frontend/src/pages/` – páginas principais
+Backends varejista e atacadista sao independentes, mas compartilham o mesmo MongoDB.
 
 ---
 
-## Executar localmente (dev)
+## Fluxo funcional
+
+### Publico
+- `/login`
+- `/register`
+
+### Protegido
+- `/produtos`
+  - Vitrine em grade de fotos
+  - Scroll infinito
+  - Quando ha busca/filtro ativo: cards mais detalhados (nome + precos por unidade + qtd. unitaria)
+- `/produtos/:id`
+  - Detalhe do produto
+  - Selecao de unidade
+  - Quantidade com controle `-` e `+`
+  - Adicionar ao carrinho
+- `/carrinho`
+  - Itens por atacadista
+  - Selecao de endereco por atacadista
+  - Selecao de condicao de pagamento por atacadista (default `A VISTA`)
+- `/pedidos`
+  - Lista de pedidos (inclui condicao de pagamento)
+- `/pedidos/:id`
+  - Detalhe do pedido (inclui condicao de pagamento)
+  - Gerar PDF
+  - Compartilhar PDF (WhatsApp e outros apps, quando suportado)
+  - Duplicar pedido
+- `/perfil`
+  - Dados cadastrais
+  - Enderecos (CRUD)
+- `/dashboard`
+
+---
+
+## Regras importantes de negocio
+
+- O frontend nunca envia `varejista_id`; o backend extrai do JWT.
+- O fechamento do carrinho valida:
+  - endereco selecionado por atacadista
+  - condicao de pagamento escolhida entre as condicoes ofertadas pelo atacadista
+  - pedido minimo por atacadista
+- Condicao de pagamento e gravada no pedido em `condicao_pagamento`.
+
+---
+
+## Endpoints principais
+
+- Auth
+  - `POST /auth/register`
+  - `POST /auth/login`
+  - `GET /auth/me`
+  - `POST /auth/refresh`
+
+- Produtos
+  - `GET /produtos/`
+  - `GET /produtos/{produto_id}`
+
+- Enderecos
+  - `GET /enderecos/`
+  - `POST /enderecos/`
+  - `PUT /enderecos/{endereco_id}`
+  - `DELETE /enderecos/{endereco_id}`
+  - `POST /enderecos/{endereco_id}/definir-principal`
+
+- Carrinho
+  - `GET /carrinho/`
+  - `POST /carrinho/itens`
+  - `PUT /carrinho/itens/{produto_id}`
+  - `DELETE /carrinho/itens/{produto_id}`
+  - `POST /carrinho/finalizar`
+
+- Pedidos
+  - `GET /pedidos/`
+  - `GET /pedidos/{id}`
+  - `POST /pedidos/{id}/duplicar`
+
+---
+
+## Estrutura importante
+
+- Backend
+  - `backend/app/api/v1/` - rotas REST
+  - `backend/app/services/` - regras de negocio
+  - `backend/app/schemas/` - modelos Pydantic
+  - `backend/app/utils/dependencies.py` - auth e contexto do varejista
+
+- Frontend
+  - `frontend/src/api/client.ts` - axios e refresh token
+  - `frontend/src/store/authStore.ts` - sessao
+  - `frontend/src/pages/` - telas
+
+---
+
+## Executar localmente
 
 ### Backend
 ```bash
@@ -55,7 +150,7 @@ cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8001
 ```
-Swagger: http://localhost:8001/docs
+Swagger: `http://localhost:8001/docs`
 
 ### Frontend
 ```bash
@@ -63,17 +158,15 @@ cd frontend
 npm install
 npm run dev
 ```
-App: http://localhost:5174
+App: `http://localhost:5174`
 
 ---
 
-## Variáveis de ambiente
+## Variaveis de ambiente
 
-### Backend (usa .env do portal)
-O backend do varejista reutiliza o `.env` **global do portal** com credenciais Mongo/JWT.
-
-Exemplo (na raiz do portal):
-```
+### Backend (`pinn-b2b-varejista/.env`)
+Exemplo:
+```env
 MONGODB_USERNAME=...
 MONGODB_PASSWORD=...
 MONGODB_HOST=...
@@ -82,129 +175,56 @@ JWT_SECRET_KEY=...
 ```
 
 ### Frontend (`frontend/.env`)
-```
+```env
 VITE_API_BASE_URL=http://localhost:8001
 ```
 
 ---
 
-## Deploy (produção)
+## Dependencias relevantes (frontend)
 
-### Frontend (Vercel)
-- Build automático via GitHub
-- Variável obrigatória:
-  - `VITE_API_BASE_URL=https://<backend-render-url>`
+- `jspdf`
+- `jspdf-autotable`
 
-### Backend (Render)
-- Serviço Web Python
-- `Start Command`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Dependências em `backend/requirements.txt`
+Usadas para geracao de PDF em `OrderDetailsPage`.
 
 ---
 
-## Fluxo funcional
+## Seeds
 
-### Público
-- `/login` – login do varejista
-- `/register` – auto‑registro do varejista (com busca de CNPJ)
+Na inicializacao, o backend cria um varejista e usuario de exemplo (idempotente).
 
-### Protegido (JWT)
-- `/produtos` – catálogo unificado (somente leitura)
-- `/carrinho` – itens + seleção de endereço por atacadista
-- `/pedidos` – lista de pedidos do varejista
-- `/pedidos/:id` – detalhe do pedido
-- `/enderecos` – CRUD de endereços (acessível pelo Perfil)
-
----
-
-## Autenticação (frontend)
-
-Tokens são salvos com prefixo `pinn_varejista_...`:
-- `pinn_varejista_access_token`
-- `pinn_varejista_refresh_token`
-
-Regras:
-- Cada requisição inclui `Authorization: Bearer <token>`.
-- Em `401`, tenta `POST /auth/refresh`.
-- Se o refresh falhar, limpa sessão e redireciona para `/login`.
-
----
-
-## Endpoints principais (backend)
-
-- `POST /auth/register` – auto‑registro, busca CNPJ
-- `POST /auth/login`
-- `GET /auth/me`
-- `POST /auth/refresh`
-- `GET /produtos` (somente leitura)
-- `GET /enderecos/`, `POST /enderecos/`
-- `GET /carrinho/`, `POST /carrinho/itens`
-- `POST /carrinho/finalizar`
-- `GET /pedidos/`, `GET /pedidos/{id}`
-- `POST /pedidos/{id}/duplicar`
-
----
-
-## Multi‑tenant e coleções Mongo
-
-Coleções:
-- `varejistas`
-- `users` / `varejista_users`
-- `produtos` (compartilhada com atacadista)
-- `carrinhos`
-- `pedidos` (compartilhada)
-
-Regras:
-- `varejista_id` nunca vem do frontend.
-- Sempre extraído do JWT no backend.
-
----
-
-## Seeds e dados de teste
-
-Na inicialização, o backend cria um varejista modelo e usuário padrão, sem duplicar se já existir.
-
-Credenciais do seed (ver `backend/app/seed/initial_data.py`):
+Credenciais seed:
 - Email: `pinn_varejista@pinn.com`
 - Senha: `pinn001`
 
 ---
 
-## Checklist rápido de diagnóstico
+## Deploy
 
-### Erro “Not authenticated” no mobile
-Causa comum: **redirect 307 perde Authorization**.  
-Solução aplicada: garantir rotas **com e sem barra final** no backend e usar `/carrinho/`, `/enderecos/`, `/pedidos/` no frontend.
+### Frontend (Vercel)
+- Build automatico via GitHub
+- Variavel obrigatoria: `VITE_API_BASE_URL=https://<backend-url>`
 
-### Tela em branco / erro `toFixed`
-Causa: campos numéricos nulos vindos do backend.  
-Solução: `formatCurrency` com fallback para 0.
-
-### Build falha no Vercel (Permission denied vite)
-Causa: `node_modules` versionado no Git.  
-Solução: remover do repo e ignorar em `.gitignore`.
+### Backend (Render)
+- Start command:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
 
 ---
 
-## Padrões de UI (mobile vs desktop)
+## Observacoes de diagnostico
 
-- Header compacto no mobile, com controles alinhados à direita
-- Botões importantes full‑width no mobile quando necessário
-- Textos curtos e legíveis
-- Menu “Endereços” apenas dentro do Perfil
-
----
-
-## Convenções e boas práticas
-
-- Não versionar `.env`, `node_modules`, `frontend/dist`, `__pycache__`, `*.pyc`
-- Evitar chamadas sem barra final para endpoints autenticados no backend
-- Sempre validar dados antes de renderizar no front
+- Erro de autenticacao em mobile pode ocorrer com redirects 307 sem header Authorization.
+  - Preferir chamadas com barra final nos endpoints que usam esse padrao (`/carrinho/`, `/enderecos/`, `/pedidos/`).
+- Campos numericos podem vir nulos em cenarios de dados incompletos.
+  - Sempre aplicar fallback ao formatar moeda.
 
 ---
 
-## Contato rápido (contexto)
+## Boas praticas
 
-Projeto: PINN B2B – Cliente (Varejista)  
-Stack: FastAPI + MongoDB + React/Vite/Chakra  
-Deploy: Render (backend) + Vercel (frontend)
+- Nao versionar `.env`, `node_modules`, `frontend/dist`, `__pycache__`, `*.pyc`.
+- Validar dados antes de renderizar no frontend.
+- Manter consistencia de UX entre mobile e desktop.

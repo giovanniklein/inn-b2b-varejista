@@ -156,8 +156,12 @@ export function ProductsPage() {
     <Box>
       <Stack spacing={4} mb={5}>
         <Box>
-          <Text fontSize="2xl" fontWeight="bold">
-            Catalogo
+          <Text
+            fontSize={{ base: 'xl', sm: '2xl' }}
+            fontWeight="bold"
+            whiteSpace="nowrap"
+          >
+            Algumas ofertas para voce
           </Text>
           <Text color="gray.500" fontSize="sm">
             Toque na foto para abrir os detalhes e comprar.
