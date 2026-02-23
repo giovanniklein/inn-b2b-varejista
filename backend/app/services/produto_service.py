@@ -107,9 +107,22 @@ class ProdutoLeituraService:
         for item in precos_raw:
             unidade = item.get("unidade")
             preco = item.get("preco")
+            quantidade_unidades_raw = (
+                item.get("quantidade_unidades")
+                or item.get("qtd_unidades")
+                or 1
+            )
+            try:
+                quantidade_unidades = max(int(quantidade_unidades_raw), 1)
+            except (TypeError, ValueError):
+                quantidade_unidades = 1
             if unidade and preco is not None:
                 precos.append(
-                    ProdutoPreco(unidade=str(unidade), preco=float(preco))
+                    ProdutoPreco(
+                        unidade=str(unidade),
+                        preco=float(preco),
+                        quantidade_unidades=quantidade_unidades,
+                    )
                 )
 
         if not precos:
@@ -118,6 +131,7 @@ class ProdutoLeituraService:
                     ProdutoPreco(
                         unidade="unidade",
                         preco=float(doc.get("preco_unidade")),
+                        quantidade_unidades=1,
                     )
                 )
             if doc.get("preco_caixa") is not None:
@@ -125,6 +139,7 @@ class ProdutoLeituraService:
                     ProdutoPreco(
                         unidade="caixa",
                         preco=float(doc.get("preco_caixa")),
+                        quantidade_unidades=1,
                     )
                 )
             if doc.get("preco_palete") is not None:
@@ -132,6 +147,7 @@ class ProdutoLeituraService:
                     ProdutoPreco(
                         unidade="palete",
                         preco=float(doc.get("preco_palete")),
+                        quantidade_unidades=1,
                     )
                 )
 

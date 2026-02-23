@@ -39,6 +39,7 @@ interface PedidoListItem {
   id: string;
   atacadista_id: string;
   atacadista_nome?: string | null;
+  condicao_pagamento?: string;
   valor_total: number;
   status: PedidoStatus;
   data_criacao: string;
@@ -234,6 +235,9 @@ export function OrdersPage() {
                   <Text fontSize="xs" color="gray.500">
                     {formatDate(pedido.data_criacao)}
                   </Text>
+                  <Text fontSize="xs" color="gray.500">
+                    Condicao: {pedido.condicao_pagamento ?? 'A VISTA'}
+                  </Text>
                   <Text fontSize="sm" mt={2} noOfLines={2}>
                     {pedido.endereco_entrega.descricao} - {pedido.endereco_entrega.cidade}/
                     {pedido.endereco_entrega.uf}
@@ -281,6 +285,9 @@ export function OrdersPage() {
                           {formatPedidoCodigo(pedido.id)}
                         </Text>
                       </HStack>
+                      <Text fontSize="xs" color="gray.500" mt={1}>
+                        Condicao: {pedido.condicao_pagamento ?? 'A VISTA'}
+                      </Text>
                     </Td>
                     <Td>
                       <Text fontSize="sm" noOfLines={2}>

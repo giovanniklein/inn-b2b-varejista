@@ -58,6 +58,7 @@ class CarrinhoItemUpdateRequest(BaseModel):
 class CarrinhoItemPreco(BaseModel):
     unidade: str
     preco: float = Field(..., ge=0)
+    quantidade_unidades: int = Field(default=1, ge=1)
 
 
 class CarrinhoItemResponse(CarrinhoItemBase):
@@ -68,6 +69,7 @@ class CarrinhoItemResponse(CarrinhoItemBase):
 
 class CarrinhoResponse(BaseModel):
     itens: List[CarrinhoItemResponse] = Field(default_factory=list)
+    condicoes_pagamento_por_atacadista: Dict[str, List[str]] = Field(default_factory=dict)
     valor_total: float = Field(..., ge=0)
     atualizado_em: datetime | None = None
 
@@ -75,6 +77,10 @@ class CarrinhoResponse(BaseModel):
 class FinalizarCarrinhoEnderecoItem(BaseModel):
     atacadista_id: str = Field(..., description="ID do atacadista")
     endereco_id: str = Field(..., description="ID do endereÃ§o de entrega do varejista")
+    condicao_pagamento: str | None = Field(
+        default=None,
+        description="Condicao de pagamento selecionada para o atacadista",
+    )
 
 
 class FinalizarCarrinhoRequest(BaseModel):

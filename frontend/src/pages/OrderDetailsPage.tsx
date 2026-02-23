@@ -19,6 +19,8 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import { api } from '../api/client';
 
@@ -49,6 +51,7 @@ interface PedidoDetailResponse {
   id: string;
   atacadista_id: string;
   atacadista_nome?: string | null;
+  condicao_pagamento: string;
   varejista_id: string;
   valor_total: number;
   status: PedidoStatus;
@@ -107,6 +110,8 @@ export function OrderDetailsPage() {
   const [pedido, setPedido] = useState<PedidoDetailResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSharingPdf, setIsSharingPdf] = useState(false);
 
   const navigate = useNavigate();
   const toast = useToast();
@@ -160,6 +165,119 @@ export function OrderDetailsPage() {
     }
   };
 
+  const getPdfFileName = () => `pedido-${formatPedidoCodigo(pedido?.id).toLowerCase()}.pdf`;
+
+  const buildPdfBlob = (): Blob | null => {
+    if (!pedido) return null;
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text(`Pedido ${formatPedidoCodigo(pedido.id)}`, 14, 16);
+    doc.setFontSize(11);
+    doc.text(`Atacadista: ${pedido.atacadista_nome ?? pedido.atacadista_id}`, 14, 24);
+    doc.text(`Status: ${pedido.status}`, 14, 30);
+    doc.text(`Condicao de pagamento: ${pedido.condicao_pagamento ?? 'A VISTA'}`, 14, 36);
+    doc.text(`Data: ${formatDate(pedido.data_criacao)}`, 14, 42);
+    doc.text(`Valor total: ${formatCurrency(pedido.valor_total)}`, 14, 48);
+
+    doc.text('Endereco de entrega:', 14, 58);
+    doc.setFontSize(10);
+    doc.text(
+      `${pedido.endereco_entrega.descricao} - ${pedido.endereco_entrega.logradouro}, ${pedido.endereco_entrega.numero}`,
+      14,
+      64,
+    );
+    doc.text(
+      `${pedido.endereco_entrega.bairro} - ${pedido.endereco_entrega.cidade}/${pedido.endereco_entrega.uf} - CEP ${pedido.endereco_entrega.cep}`,
+      14,
+      70,
+    );
+    if (pedido.endereco_entrega.complemento) {
+      doc.text(`Complemento: ${pedido.endereco_entrega.complemento}`, 14, 76);
+    }
+
+    autoTable(doc, {
+      startY: pedido.endereco_entrega.complemento ? 84 : 78,
+      head: [['Produto', 'Unidade', 'Quantidade', 'Valor unitario', 'Subtotal']],
+      body: pedido.itens.map((item) => [
+        item.descricao_produto,
+        item.unidade,
+        String(item.quantidade),
+        formatCurrency(item.valor_unitario),
+        formatCurrency(item.valor_total),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [33, 33, 33] },
+    });
+
+    const pdfArrayBuffer = doc.output('arraybuffer');
+    return new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+  };
+
+  const handleGerarPdf = async () => {
+    const blob = buildPdfBlob();
+    if (!blob) return;
+
+    try {
+      setIsGeneratingPdf(true);
+      const fileUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = getPdfFileName();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(fileUrl);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleCompartilharPdf = async () => {
+    const blob = buildPdfBlob();
+    if (!blob || !pedido) return;
+
+    const fileName = getPdfFileName();
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+
+    try {
+      setIsSharingPdf(true);
+      if (
+        typeof navigator !== 'undefined' &&
+        'share' in navigator &&
+        'canShare' in navigator &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          title: `Pedido ${formatPedidoCodigo(pedido.id)}`,
+          text: `Pedido ${formatPedidoCodigo(pedido.id)} - ${pedido.atacadista_nome ?? pedido.atacadista_id}`,
+          files: [file],
+        });
+        return;
+      }
+
+      // Fallback: baixa o PDF quando compartilhamento por arquivo nao for suportado.
+      await handleGerarPdf();
+      toast({
+        title: 'Compartilhamento nao suportado neste dispositivo',
+        description: 'PDF baixado para voce compartilhar manualmente.',
+        status: 'info',
+        duration: 4000,
+        isClosable: true,
+      });
+    } catch {
+      toast({
+        title: 'Nao foi possivel compartilhar o PDF',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSharingPdf(false);
+    }
+  };
+
   useEffect(() => {
     carregarPedido();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,16 +302,36 @@ export function OrderDetailsPage() {
             Detalhes do pedido enviado para o atacadista.
           </Text>
         </Box>
-        <Button
-          size="sm"
-          colorScheme="brand"
-          onClick={duplicarPedido}
-          isLoading={isDuplicating}
-          alignSelf={{ base: 'stretch', md: 'center' }}
-          w={{ base: 'full', md: 'auto' }}
-        >
-          Duplicar
-        </Button>
+        <Stack direction={{ base: 'column', md: 'row' }} spacing={2} w={{ base: 'full', md: 'auto' }}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGerarPdf}
+            isLoading={isGeneratingPdf}
+            w={{ base: 'full', md: 'auto' }}
+          >
+            Gerar PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleCompartilharPdf}
+            isLoading={isSharingPdf}
+            w={{ base: 'full', md: 'auto' }}
+          >
+            Compartilhar PDF
+          </Button>
+          <Button
+            size="sm"
+            colorScheme="brand"
+            onClick={duplicarPedido}
+            isLoading={isDuplicating}
+            alignSelf={{ base: 'stretch', md: 'center' }}
+            w={{ base: 'full', md: 'auto' }}
+          >
+            Duplicar
+          </Button>
+        </Stack>
       </Flex>
 
       <Skeleton isLoaded={!isLoading} borderRadius="md">
@@ -217,6 +355,10 @@ export function OrderDetailsPage() {
                 <HStack justify="space-between">
                   <Text color="gray.600">Valor total</Text>
                   <Text fontWeight="semibold">{formatCurrency(pedido.valor_total)}</Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Text color="gray.600">Condicao de pagamento</Text>
+                  <Text>{pedido.condicao_pagamento ?? 'A VISTA'}</Text>
                 </HStack>
                 <HStack justify="space-between">
                   <Text color="gray.600">Data de criacao</Text>

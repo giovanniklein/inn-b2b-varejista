@@ -39,11 +39,20 @@ class CarrinhoService:
     async def obter_carrinho(self, varejista_id: str) -> CarrinhoResponse:
         doc = await self.carrinho_repo.get_carrinho_by_varejista(varejista_id)
         if not doc:
-            return CarrinhoResponse(itens=[], valor_total=0.0, atualizado_em=None)
+            return CarrinhoResponse(
+                itens=[],
+                condicoes_pagamento_por_atacadista={},
+                valor_total=0.0,
+                atualizado_em=None,
+            )
 
         atacadista_ids = {str(item["atacadista_id"]) for item in doc.get("itens", [])}
         atacadistas = await self.atacadista_repo.get_by_ids(list(atacadista_ids))
         atacadista_por_id = {str(a["_id"]): a for a in atacadistas}
+        condicoes_por_atacadista = {
+            atacadista_id: self._normalize_condicoes_pagamento(atacadista_doc)
+            for atacadista_id, atacadista_doc in atacadista_por_id.items()
+        }
 
         itens_resp: List[CarrinhoItemResponse] = []
         for item in doc.get("itens", []):
@@ -72,6 +81,7 @@ class CarrinhoService:
 
         return CarrinhoResponse(
             itens=itens_resp,
+            condicoes_pagamento_por_atacadista=condicoes_por_atacadista,
             valor_total=doc.get("valor_total", 0.0),
             atualizado_em=doc.get("atualizado_em"),
         )
@@ -240,6 +250,9 @@ class CarrinhoService:
             )
 
         endereco_map: Dict[str, str] = {e.atacadista_id: e.endereco_id for e in payload.enderecos}
+        condicao_pagamento_map: Dict[str, str | None] = {
+            e.atacadista_id: e.condicao_pagamento for e in payload.enderecos
+        }
 
         atacadistas_no_carrinho = {item["atacadista_id"] for item in carrinho_doc["itens"]}
         for atacadista_id in atacadistas_no_carrinho:
@@ -272,6 +285,17 @@ class CarrinhoService:
                     detail=f"Atacadista {atacadista_id} nao encontrado",
                 )
 
+            condicoes_ofertadas = self._normalize_condicoes_pagamento(atacadista)
+            condicao_pagamento = (condicao_pagamento_map.get(atacadista_id) or "A VISTA").strip()
+            if condicao_pagamento not in condicoes_ofertadas:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Condicao de pagamento invalida para o atacadista "
+                        f"{atacadista.get('nome_fantasia', atacadista_id)}"
+                    ),
+                )
+
             pedido_minimo = float(atacadista.get("pedido_minimo", 150.0))
             valor_total = round(sum(i["subtotal"] for i in itens), 2)
 
@@ -297,6 +321,7 @@ class CarrinhoService:
             pedido_doc = {
                 "atacadista_id": atacadista_id,
                 "varejista_id": varejista_id,
+                "condicao_pagamento": condicao_pagamento,
                 "endereco_entrega": endereco_entrega,
                 "itens": [
                     {
@@ -458,16 +483,49 @@ class CarrinhoService:
         for item in precos_raw:
             unidade = item.get("unidade")
             preco = item.get("preco")
+            quantidade_unidades_raw = (
+                item.get("quantidade_unidades")
+                or item.get("qtd_unidades")
+                or 1
+            )
+            try:
+                quantidade_unidades = max(int(quantidade_unidades_raw), 1)
+            except (TypeError, ValueError):
+                quantidade_unidades = 1
             if unidade and preco is not None:
-                precos.append({"unidade": str(unidade), "preco": float(preco)})
+                precos.append(
+                    {
+                        "unidade": str(unidade),
+                        "preco": float(preco),
+                        "quantidade_unidades": quantidade_unidades,
+                    }
+                )
 
         if not precos:
             if produto.get("preco_unidade") is not None:
-                precos.append({"unidade": "unidade", "preco": float(produto.get("preco_unidade"))})
+                precos.append(
+                    {
+                        "unidade": "unidade",
+                        "preco": float(produto.get("preco_unidade")),
+                        "quantidade_unidades": 1,
+                    }
+                )
             if produto.get("preco_caixa") is not None:
-                precos.append({"unidade": "caixa", "preco": float(produto.get("preco_caixa"))})
+                precos.append(
+                    {
+                        "unidade": "caixa",
+                        "preco": float(produto.get("preco_caixa")),
+                        "quantidade_unidades": 1,
+                    }
+                )
             if produto.get("preco_palete") is not None:
-                precos.append({"unidade": "palete", "preco": float(produto.get("preco_palete"))})
+                precos.append(
+                    {
+                        "unidade": "palete",
+                        "preco": float(produto.get("preco_palete")),
+                        "quantidade_unidades": 1,
+                    }
+                )
 
         return precos
 
@@ -476,3 +534,19 @@ class CarrinhoService:
         if not produto:
             return ""
         return produto.get("descricao", "")
+
+    def _normalize_condicoes_pagamento(self, atacadista_doc: Dict) -> List[str]:
+        condicoes_raw = atacadista_doc.get("condicoes_pagamento") or ["A VISTA"]
+
+        condicoes: List[str] = []
+        for condicao in condicoes_raw:
+            if not condicao:
+                continue
+            valor = str(condicao).strip().upper()
+            if valor and valor not in condicoes:
+                condicoes.append(valor)
+
+        if "A VISTA" not in condicoes:
+            condicoes.insert(0, "A VISTA")
+
+        return condicoes

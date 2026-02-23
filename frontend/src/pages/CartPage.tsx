@@ -35,11 +35,12 @@ interface CarrinhoItem {
   unidade_medida: string;
   preco_unitario: number;
   subtotal: number;
-  precos: { unidade: string; preco: number }[];
+  precos: { unidade: string; preco: number; quantidade_unidades: number }[];
 }
 
 interface CarrinhoResponse {
   itens: CarrinhoItem[];
+  condicoes_pagamento_por_atacadista?: Record<string, string[]>;
   valor_total: number;
   atualizado_em: string | null;
 }
@@ -82,9 +83,20 @@ const formatUnidade = (value: string) => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
+const formatQtdUnidades = (value: number | null | undefined) => {
+  const safeValue =
+    typeof value === 'number' && Number.isFinite(value) && value > 0
+      ? Math.trunc(value)
+      : 1;
+  return `${safeValue} un`;
+};
+
 export function CartPage() {
   const [carrinho, setCarrinho] = useState<CarrinhoResponse | null>(null);
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
+  const [condicoesPagamentoSelecionadas, setCondicoesPagamentoSelecionadas] = useState<
+    Record<string, string>
+  >({});
   const [enderecosSelecionados, setEnderecosSelecionados] = useState<
     Record<string, string>
   >({});
@@ -209,6 +221,13 @@ export function CartPage() {
     }));
   };
 
+  const handleSelecionarCondicaoPagamento = (atacadistaId: string, condicao: string) => {
+    setCondicoesPagamentoSelecionadas((prev) => ({
+      ...prev,
+      [atacadistaId]: condicao,
+    }));
+  };
+
   const getEnderecoPadraoId = () => {
     if (!enderecos.length) return null;
     const principal = enderecos.find((endereco) => endereco.eh_principal);
@@ -235,6 +254,26 @@ export function CartPage() {
       return next;
     });
   }, [enderecos, itensAgrupadosPorAtacadista]);
+
+  useEffect(() => {
+    if (!carrinho?.condicoes_pagamento_por_atacadista) return;
+
+    const atacadistas = Object.keys(itensAgrupadosPorAtacadista);
+    if (!atacadistas.length) return;
+
+    setCondicoesPagamentoSelecionadas((prev) => {
+      const next = { ...prev };
+      for (const atacadistaId of atacadistas) {
+        const opcoes = carrinho.condicoes_pagamento_por_atacadista?.[atacadistaId] ?? ['A VISTA'];
+        const condicaoDefault = opcoes.find((item) => item === 'A VISTA') ?? opcoes[0] ?? 'A VISTA';
+        const atual = next[atacadistaId];
+        if (!atual || !opcoes.includes(atual)) {
+          next[atacadistaId] = condicaoDefault;
+        }
+      }
+      return next;
+    });
+  }, [carrinho?.condicoes_pagamento_por_atacadista, itensAgrupadosPorAtacadista]);
 
   const handleFinalizar = async () => {
     if (!carrinho || !carrinho.itens.length) {
@@ -263,6 +302,7 @@ export function CartPage() {
     const enderecosPayload = atacadistas.map((atacadistaId) => ({
       atacadista_id: atacadistaId,
       endereco_id: enderecosSelecionados[atacadistaId] ?? enderecoPadraoId ?? '',
+      condicao_pagamento: condicoesPagamentoSelecionadas[atacadistaId] ?? 'A VISTA',
     }));
 
     const payload = {
@@ -345,6 +385,27 @@ export function CartPage() {
                 w={{ base: 'full', md: 'auto' }}
               >
                 <Text fontSize="sm" color="gray.600">
+                  Condicao de pagamento
+                </Text>
+                <Select
+                  size="sm"
+                  value={condicoesPagamentoSelecionadas[atacadistaId] ?? 'A VISTA'}
+                  onChange={(e) =>
+                    handleSelecionarCondicaoPagamento(atacadistaId, e.target.value)
+                  }
+                  w={{ base: 'full', md: '220px' }}
+                  maxW={{ base: 'full', md: '220px' }}
+                >
+                  {(carrinho?.condicoes_pagamento_por_atacadista?.[atacadistaId] ?? ['A VISTA']).map(
+                    (condicao) => (
+                      <option key={condicao} value={condicao}>
+                        {condicao}
+                      </option>
+                    ),
+                  )}
+                </Select>
+
+                <Text fontSize="sm" color="gray.600">
                   Endereco de entrega
                 </Text>
                 <Select
@@ -398,7 +459,7 @@ export function CartPage() {
                       >
                         {item.precos.map((preco) => (
                           <option key={preco.unidade} value={preco.unidade}>
-                            {formatUnidade(preco.unidade)}
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)})
                           </option>
                         ))}
                       </Select>
@@ -490,7 +551,7 @@ export function CartPage() {
                       >
                         {item.precos.map((preco) => (
                           <option key={preco.unidade} value={preco.unidade}>
-                            {formatUnidade(preco.unidade)}
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)})
                           </option>
                         ))}
                       </Select>

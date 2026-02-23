@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class ProdutoPreco(BaseModel):
     unidade: str
     preco: float = Field(..., ge=0)
+    quantidade_unidades: int = Field(default=1, ge=1)
 
 
 class ProdutoResponse(BaseModel):

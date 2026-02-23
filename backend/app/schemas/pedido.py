@@ -9,12 +9,9 @@ from app.models.common import PedidoStatus
 
 
 class PedidoEnderecoResponse(BaseModel):
-    """Endereço de entrega associado a um pedido.
+    """Endereco de entrega associado a um pedido."""
 
-    O documento é embutido dentro do pedido na coleção `pedidos`.
-    """
-
-    id: str = Field(..., description="ID interno do endereço no cadastro do varejista")
+    id: str = Field(..., description="ID interno do endereco no cadastro do varejista")
     descricao: str
     logradouro: str
     numero: str
@@ -40,8 +37,9 @@ class PedidoListItem(BaseModel):
     atacadista_id: str
     atacadista_nome: str | None = Field(
         default=None,
-        description="Nome/razão social do atacadista para exibição na lista de pedidos",
+        description="Nome/razao social do atacadista para exibicao na lista de pedidos",
     )
+    condicao_pagamento: str = Field(default="A VISTA")
     valor_total: float
     status: PedidoStatus
     data_criacao: datetime
@@ -61,8 +59,9 @@ class PedidoDetailResponse(BaseModel):
     atacadista_id: str
     atacadista_nome: str | None = Field(
         default=None,
-        description="Nome/razão social do atacadista para exibição no detalhe do pedido",
+        description="Nome/razao social do atacadista para exibicao no detalhe do pedido",
     )
+    condicao_pagamento: str = Field(default="A VISTA")
     varejista_id: str
     valor_total: float
     status: PedidoStatus
