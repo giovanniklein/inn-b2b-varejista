@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Flex,
-  IconButton,
   Image,
   Input,
   InputGroup,
@@ -15,7 +14,7 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '@chakra-ui/icons';
+import { SearchIcon } from '@chakra-ui/icons';
 
 import { api } from '../api/client';
 
@@ -35,19 +34,26 @@ interface ProdutoListResponse {
 }
 
 export function ProductsPage() {
-  const [data, setData] = useState<ProdutoListResponse | null>(null);
+  const [items, setItems] = useState<Produto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
 
   const toast = useToast();
   const navigate = useNavigate();
 
-  const fetchProdutos = async (pageToFetch: number, term: string) => {
-    setIsLoading(true);
+  const fetchProdutos = async (pageToFetch: number, term: string, append: boolean) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -59,7 +65,8 @@ export function ProductsPage() {
         },
       });
 
-      setData(data);
+      setItems((prev) => (append ? [...prev, ...(data.items ?? [])] : data.items ?? []));
+      setTotalPages(data.total_pages ?? 1);
       setPage(data.page);
     } catch (err: any) {
       const message =
@@ -73,14 +80,26 @@ export function ProductsPage() {
         isClosable: true,
       });
     } finally {
-      setIsLoading(false);
+      if (append) {
+        setIsLoadingMore(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchProdutos(page, searchTerm);
+    setPage(1);
+    setTotalPages(1);
+    fetchProdutos(1, searchTerm, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, searchTerm]);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (page <= 1) return;
+    fetchProdutos(page, searchTerm, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -88,11 +107,29 @@ export function ProductsPage() {
     setSearchTerm(search);
   };
 
-  const canGoPrev = useMemo(() => (data?.page ?? 1) > 1, [data]);
-  const canGoNext = useMemo(
-    () => (data?.page ?? 1) < (data?.total_pages ?? 1),
-    [data],
-  );
+  const hasMore = useMemo(() => page < totalPages, [page, totalPages]);
+
+  useEffect(() => {
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (
+          first?.isIntersecting &&
+          hasMore &&
+          !isLoading &&
+          !isLoadingMore
+        ) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { rootMargin: '240px 0px' },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, sentinel]);
 
   return (
     <Box>
@@ -134,12 +171,12 @@ export function ProductsPage() {
         </Text>
       )}
 
-      {data && data.items.length === 0 && !isLoading && <Text>Nenhum produto encontrado.</Text>}
+      {items.length === 0 && !isLoading && <Text>Nenhum produto encontrado.</Text>}
 
-      {data && data.items.length > 0 && (
+      {items.length > 0 && (
         <>
           <SimpleGrid columns={{ base: 2, sm: 2, md: 3, lg: 4 }} spacing={{ base: 3, md: 4 }}>
-            {data.items.map((produto) => (
+            {items.map((produto) => (
               <Box
                 key={produto.id}
                 role="button"
@@ -178,33 +215,22 @@ export function ProductsPage() {
             ))}
           </SimpleGrid>
 
-          {data.total_pages > 1 && (
-            <Flex mt={6} justify="space-between" align="center">
+          <Box ref={setSentinel} h="1px" />
+          {isLoadingMore && (
+            <Flex mt={4} align="center" justify="center" gap={2}>
+              <Spinner size="sm" />
               <Text fontSize="sm" color="gray.600">
-                Pagina {data.page} de {data.total_pages}
+                Carregando mais produtos...
               </Text>
-
-              <Stack direction="row" spacing={2}>
-                <IconButton
-                  aria-label="Pagina anterior"
-                  icon={<ChevronLeftIcon />}
-                  size="sm"
-                  onClick={() => canGoPrev && setPage((prev) => Math.max(prev - 1, 1))}
-                  isDisabled={!canGoPrev || isLoading}
-                />
-                <IconButton
-                  aria-label="Proxima pagina"
-                  icon={<ChevronRightIcon />}
-                  size="sm"
-                  onClick={() => canGoNext && setPage((prev) => prev + 1)}
-                  isDisabled={!canGoNext || isLoading}
-                />
-              </Stack>
             </Flex>
+          )}
+          {!hasMore && !isLoading && !isLoadingMore && (
+            <Text mt={4} textAlign="center" fontSize="sm" color="gray.500">
+              Voce chegou ao fim da lista.
+            </Text>
           )}
         </>
       )}
     </Box>
   );
 }
-

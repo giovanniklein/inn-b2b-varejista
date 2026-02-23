@@ -1,4 +1,4 @@
-﻿import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import {
   Avatar,
   Box,
@@ -7,6 +7,7 @@ import {
   Heading,
   HStack,
   IconButton,
+  Image,
   Link as ChakraLink,
   Menu,
   MenuButton,
@@ -81,16 +82,19 @@ export function MainLayout() {
           direction={{ base: 'column', md: 'row' }}
           gap={{ base: 2, md: 0 }}
         >
-          <Box order={{ base: 1, md: 1 }}>
-            <Heading size={{ base: 'sm', md: 'md' }}>PINN B2B Cliente</Heading>
-            <Text
-              fontSize={{ base: 'xs', md: 'sm' }}
-              color="gray.500"
-              display={{ base: 'none', md: 'block' }}
-            >
-              {varejistaNomeFantasia ?? 'Portal do varejista'}
-            </Text>
-          </Box>
+          <HStack order={{ base: 1, md: 1 }} spacing={3}>
+            <Image src="/logo.jpeg" alt="KIPI" boxSize={{ base: '28px', md: '32px' }} objectFit="contain" />
+            <Box>
+              <Heading size={{ base: 'sm', md: 'md' }}>KIPI</Heading>
+              <Text
+                fontSize={{ base: 'xs', md: 'sm' }}
+                color="gray.500"
+                display={{ base: 'none', md: 'block' }}
+              >
+                {varejistaNomeFantasia ?? 'Portal do varejista'}
+              </Text>
+            </Box>
+          </HStack>
 
           <Spacer display={{ base: 'none', md: 'block' }} />
 
@@ -182,5 +186,3 @@ export function MainLayout() {
     </Flex>
   );
 }
-
-

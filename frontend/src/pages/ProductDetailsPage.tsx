@@ -6,11 +6,6 @@ import {
   HStack,
   IconButton,
   Image,
-  NumberDecrementStepper,
-  NumberIncrementStepper,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
   Select,
   Stack,
   Text,
@@ -255,20 +250,36 @@ export function ProductDetailsPage() {
                 <Text fontSize="xs" color="gray.500" mb={1}>
                   Quantidade
                 </Text>
-                <NumberInput
-                  min={1}
-                  max={100}
-                  value={selectedQty}
-                  onChange={(_, valueAsNumber) =>
-                    setSelectedQty(Number.isFinite(valueAsNumber) ? valueAsNumber : 1)
-                  }
+                <HStack
+                  borderWidth="1px"
+                  borderRadius="md"
+                  overflow="hidden"
+                  spacing={0}
+                  h="40px"
+                  w={{ base: 'full', sm: '140px' }}
                 >
-                  <NumberInputField />
-                  <NumberInputStepper>
-                    <NumberIncrementStepper />
-                    <NumberDecrementStepper />
-                  </NumberInputStepper>
-                </NumberInput>
+                  <Button
+                    variant="ghost"
+                    borderRadius="0"
+                    h="full"
+                    minW="40px"
+                    onClick={() => setSelectedQty((prev) => Math.max(prev - 1, 1))}
+                  >
+                    -
+                  </Button>
+                  <Flex flex="1" justify="center" align="center" h="full" borderLeftWidth="1px" borderRightWidth="1px">
+                    <Text fontWeight="medium">{selectedQty}</Text>
+                  </Flex>
+                  <Button
+                    variant="ghost"
+                    borderRadius="0"
+                    h="full"
+                    minW="40px"
+                    onClick={() => setSelectedQty((prev) => Math.min(prev + 1, 100))}
+                  >
+                    +
+                  </Button>
+                </HStack>
               </Box>
             </Stack>
 
@@ -297,4 +308,3 @@ export function ProductDetailsPage() {
     </Box>
   );
 }
-
