@@ -36,15 +36,41 @@ class ProdutoLeituraService:
 
         skip = (page - 1) * page_size
 
-        filters: Dict[str, object] = {}
+        active_atacadista_ids = await self.atacadista_repo.get_active_ids()
+        if not active_atacadista_ids:
+            return ProdutoListResponse(
+                items=[],
+                total=0,
+                page=page,
+                page_size=page_size,
+                total_pages=1,
+            )
+
+        active_candidates: list[object] = []
+        for _id in active_atacadista_ids:
+            active_candidates.append(_id)
+            if ObjectId.is_valid(_id):
+                active_candidates.append(ObjectId(_id))
+
+        filters: Dict[str, object] = {
+            "atacadista_id": {"$in": active_candidates}
+        }
         if query:
             # Busca parcial e case-insensitive no campo descricao
             filters["descricao"] = {"$regex": query, "$options": "i"}
         if atacadista_id:
+            if atacadista_id not in active_atacadista_ids:
+                return ProdutoListResponse(
+                    items=[],
+                    total=0,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=1,
+                )
             candidatos: list[object] = [atacadista_id]
             if ObjectId.is_valid(atacadista_id):
                 candidatos.append(ObjectId(atacadista_id))
-            filters["atacadista_id"] = {"$in": candidatos} if len(candidatos) > 1 else candidatos[0]
+            filters["atacadista_id"] = {"$in": candidatos}
 
         # Para simplicidade inicial, contamos todos os produtos que batem o filtro.
         # Caso o volume cresça, podemos otimizar.
@@ -88,8 +114,10 @@ class ProdutoLeituraService:
         atacadista_por_id: Dict[str, dict] = {}
         if atacadista_id:
             atacadista = await self.atacadista_repo.get_by_id(atacadista_id)
-            if atacadista:
-                atacadista_por_id[atacadista_id] = atacadista
+            if not atacadista:
+                # Produto de atacadista inativo não deve ser visível ao varejista.
+                return None
+            atacadista_por_id[atacadista_id] = atacadista
 
         return self._to_response(doc, atacadista_por_id=atacadista_por_id)
 

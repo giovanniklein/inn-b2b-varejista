@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
 
@@ -118,7 +119,31 @@ class VarejistaRepository:
         return str(result.inserted_id)
 
     async def get_by_id(self, varejista_id: str) -> Optional[Dict[str, Any]]:
-        return await self._collection.find_one({"_id": ObjectId(varejista_id)})
+        try:
+            object_id = ObjectId(varejista_id)
+        except (InvalidId, TypeError):
+            return None
+        return await self._collection.find_one({"_id": object_id})
+
+    async def get_active_by_id(self, varejista_id: str) -> Optional[Dict[str, Any]]:
+        """Retorna o varejista somente se estiver ativo.
+
+        Regra de compatibilidade com ADM:
+        - documentos legados sem campo `ativo` sao considerados ativos
+        - `ativo=False` significa inativo
+        """
+
+        try:
+            object_id = ObjectId(varejista_id)
+        except (InvalidId, TypeError):
+            return None
+
+        return await self._collection.find_one(
+            {
+                "_id": object_id,
+                "$or": [{"ativo": {"$exists": False}}, {"ativo": True}],
+            }
+        )
 
     async def update_enderecos(
         self,
@@ -233,8 +258,15 @@ class AtacadistaLeituraRepository:
         self._db = db
         self._collection: AsyncIOMotorCollection = db["atacadistas"]
 
+    def _active_filter(self) -> Dict[str, Any]:
+        return {"$or": [{"ativo": {"$exists": False}}, {"ativo": True}]}
+
     async def get_by_id(self, atacadista_id: str) -> Optional[Dict[str, Any]]:
-        return await self._collection.find_one({"_id": ObjectId(atacadista_id)})
+        try:
+            object_id = ObjectId(atacadista_id)
+        except (InvalidId, TypeError):
+            return None
+        return await self._collection.find_one({"_id": object_id, **self._active_filter()})
 
     async def get_by_ids(self, atacadista_ids: list[str]) -> List[Dict[str, Any]]:
         """Busca múltiplos atacadistas de uma vez, útil para evitar N+1.
@@ -245,6 +277,17 @@ class AtacadistaLeituraRepository:
         if not atacadista_ids:
             return []
 
-        object_ids = [ObjectId(_id) for _id in atacadista_ids]
-        cursor = self._collection.find({"_id": {"$in": object_ids}})
+        object_ids = []
+        for _id in atacadista_ids:
+            try:
+                object_ids.append(ObjectId(_id))
+            except (InvalidId, TypeError):
+                continue
+        if not object_ids:
+            return []
+        cursor = self._collection.find({"_id": {"$in": object_ids}, **self._active_filter()})
         return [doc async for doc in cursor]
+
+    async def get_active_ids(self) -> List[str]:
+        cursor = self._collection.find(self._active_filter(), {"_id": 1})
+        return [str(doc["_id"]) async for doc in cursor]

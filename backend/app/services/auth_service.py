@@ -149,6 +149,13 @@ class AuthService:
         varejista_id = str(user["varejista_id"])
         user_id = str(user["_id"])
 
+        varejista = await self.varejista_repo.get_active_by_id(varejista_id)
+        if not varejista:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Varejista inativo",
+            )
+
         return await self._generate_tokens(user_id=user_id, varejista_id=varejista_id)
 
     async def _generate_tokens(self, user_id: str, varejista_id: str) -> TokenPair:

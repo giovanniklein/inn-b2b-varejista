@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Dict, List, Tuple
 
+from bson import ObjectId
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -56,6 +57,9 @@ class CarrinhoService:
 
         itens_resp: List[CarrinhoItemResponse] = []
         for item in doc.get("itens", []):
+            if str(item.get("atacadista_id")) not in atacadista_por_id:
+                # Não exibe itens de atacadistas inativos.
+                continue
             precos = await self._get_precos_produto(item["produto_id"])
             itens_resp.append(
                 CarrinhoItemResponse(
@@ -82,7 +86,7 @@ class CarrinhoService:
         return CarrinhoResponse(
             itens=itens_resp,
             condicoes_pagamento_por_atacadista=condicoes_por_atacadista,
-            valor_total=doc.get("valor_total", 0.0),
+            valor_total=round(sum(item.subtotal for item in itens_resp), 2),
             atualizado_em=doc.get("atualizado_em"),
         )
 
@@ -104,6 +108,13 @@ class CarrinhoService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Produto nao pertence ao atacadista informado",
+            )
+
+        atacadista = await self.atacadista_repo.get_by_id(payload.atacadista_id)
+        if not atacadista:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Atacadista inativo ou nao encontrado",
             )
 
         descricao_produto = produto.get("descricao", "")
@@ -282,7 +293,7 @@ class CarrinhoService:
             if not atacadista:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Atacadista {atacadista_id} nao encontrado",
+                    detail=f"Atacadista {atacadista_id} inativo ou nao encontrado",
                 )
 
             condicoes_ofertadas = self._normalize_condicoes_pagamento(atacadista)
@@ -378,19 +389,38 @@ class CarrinhoService:
         page: int = 1,
         page_size: int = 20,
     ) -> Tuple[List[Dict], int]:
+        active_atacadista_ids = await self.atacadista_repo.get_active_ids()
+        if not active_atacadista_ids:
+            return [], 0
+
+        active_candidates: List[object] = []
+        for _id in active_atacadista_ids:
+            active_candidates.append(_id)
+            if ObjectId.is_valid(_id):
+                active_candidates.append(ObjectId(_id))
+
+        filtros = {"atacadista_id": {"$in": active_candidates}}
         skip = (page - 1) * page_size
         docs = await self.pedido_repo.find_many(
             varejista_id,
+            filters=filtros,
             limit=page_size,
             skip=skip,
             sort=[("data_criacao", -1)],
         )
-        total = await self.pedido_repo.count(varejista_id)
+        total = await self.pedido_repo.count(varejista_id, filters=filtros)
         return docs, total
 
     async def obter_pedido_varejista(self, varejista_id: str, pedido_id: str) -> Dict:
         doc = await self.pedido_repo.find_one(varejista_id, pedido_id)
         if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Pedido nao encontrado",
+            )
+
+        atacadista_id = str(doc.get("atacadista_id", ""))
+        if not atacadista_id or not await self.atacadista_repo.get_by_id(atacadista_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Pedido nao encontrado",

@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
 from app.core.security import decode_token
-from app.repositories.base import VarejistaRepository, VarejistaUsuarioRepository
+from app.repositories.base import VarejistaRepository
 from app.schemas.auth import (
     AuthLoginRequest,
     AuthRefreshRequest,
@@ -123,9 +123,13 @@ async def refresh_tokens(payload: AuthRefreshRequest, db: DbDep) -> TokenPair:
             detail="Refresh token inválido",
         )
 
-    # Opcionalmente, poderíamos validar se o usuário ainda existe no banco.
-    usuario_repo = VarejistaUsuarioRepository(db)
-    user_doc = await usuario_repo.find_varejista_by_email(decoded.get("email", ""))
+    varejista_repo = VarejistaRepository(db)
+    varejista = await varejista_repo.get_active_by_id(varejista_id)
+    if not varejista:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Varejista inativo",
+        )
 
     service = AuthService(db)
     return await service._generate_tokens(  # type: ignore[attr-defined]
