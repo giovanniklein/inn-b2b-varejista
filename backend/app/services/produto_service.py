@@ -3,6 +3,7 @@ from __future__ import annotations
 from math import ceil
 from typing import Dict, Optional
 
+from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.repositories.base import AtacadistaLeituraRepository, ProdutoLeituraRepository
@@ -26,6 +27,7 @@ class ProdutoLeituraService:
         page: int = 1,
         page_size: int = 20,
         query: str | None = None,
+        atacadista_id: str | None = None,
     ) -> ProdutoListResponse:
         if page < 1:
             page = 1
@@ -38,6 +40,11 @@ class ProdutoLeituraService:
         if query:
             # Busca parcial e case-insensitive no campo descricao
             filters["descricao"] = {"$regex": query, "$options": "i"}
+        if atacadista_id:
+            candidatos: list[object] = [atacadista_id]
+            if ObjectId.is_valid(atacadista_id):
+                candidatos.append(ObjectId(atacadista_id))
+            filters["atacadista_id"] = {"$in": candidatos} if len(candidatos) > 1 else candidatos[0]
 
         # Para simplicidade inicial, contamos todos os produtos que batem o filtro.
         # Caso o volume cresça, podemos otimizar.

@@ -16,41 +16,34 @@ router = APIRouter()
 DbDep = Annotated[AsyncIOMotorDatabase, Depends(get_database)]
 
 
-@router.get("/", response_model=ProdutoListResponse)
+@router.get('/', response_model=ProdutoListResponse)
 async def listar_produtos(
     db: DbDep,
-    page: int = Query(default=1, ge=1, description="Número da página"),
-    page_size: int = Query(
-        default=20,
-        ge=1,
-        le=100,
-        description="Quantidade de itens por página",
-    ),
-    q: str | None = Query(
-        default=None,
-        description="Busca parcial por descrição do produto (case-insensitive)",
-    ),
+    page: int = Query(default=1, ge=1, description='Numero da pagina'),
+    page_size: int = Query(default=20, ge=1, le=100, description='Quantidade de itens por pagina'),
+    q: str | None = Query(default=None, description='Busca parcial por descricao do produto'),
+    atacadista_id: str | None = Query(default=None, description='Filtra produtos de um atacadista especifico'),
 ) -> ProdutoListResponse:
-    """Lista produtos de todos os atacadistas (modo leitura).
-
-    O varejista não tem filtro por atacadista neste endpoint; ele vê a
-    vitrine unificada. Os filtros mais complexos (busca por texto,
-    atacadista específico, faixa de preço) podem ser adicionados depois.
-    """
+    """Lista produtos para o varejista, com filtros opcionais."""
 
     service = ProdutoLeituraService(db)
-    return await service.listar_produtos(page=page, page_size=page_size, query=q)
+    return await service.listar_produtos(
+        page=page,
+        page_size=page_size,
+        query=q,
+        atacadista_id=atacadista_id,
+    )
 
 
-@router.get("/{produto_id}", response_model=ProdutoResponse)
+@router.get('/{produto_id}', response_model=ProdutoResponse)
 async def obter_produto(produto_id: str, db: DbDep) -> ProdutoResponse:
-    """Obtém os detalhes de um único produto."""
+    """Obtem os detalhes de um unico produto."""
 
     service = ProdutoLeituraService(db)
     produto = await service.obter_produto(produto_id)
     if not produto:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Produto não encontrado",
+            detail='Produto nao encontrado',
         )
     return produto

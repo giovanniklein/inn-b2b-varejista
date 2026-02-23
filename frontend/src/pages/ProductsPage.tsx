@@ -23,6 +23,8 @@ interface Produto {
   codigo: string;
   descricao: string;
   imagem_base64?: string | null;
+  atacadista_id: string;
+  atacadista_nome?: string | null;
   precos?: { unidade: string; preco: number; quantidade_unidades: number }[] | null;
 }
 
@@ -244,6 +246,9 @@ export function ProductsPage() {
                   <Box p={3}>
                     <Text fontSize="sm" fontWeight="semibold" noOfLines={2} mb={2}>
                       {produto.descricao}
+                    </Text>
+                    <Text fontSize="xs" color="gray.500" mb={2} noOfLines={1}>
+                      Fornecedor: {produto.atacadista_nome ?? produto.atacadista_id}
                     </Text>
 
                     <Stack spacing={1}>

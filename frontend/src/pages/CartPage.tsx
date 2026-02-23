@@ -5,6 +5,13 @@ import {
   Divider,
   Flex,
   HStack,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   NumberDecrementStepper,
   NumberIncrementStepper,
   NumberInput,
@@ -20,6 +27,7 @@ import {
   Th,
   Thead,
   Tr,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -70,6 +78,31 @@ interface FinalizarCarrinhoResponse {
   }[];
 }
 
+interface ProdutoComplementar {
+  id: string;
+  descricao: string;
+  atacadista_id: string;
+  precos?: { unidade: string; preco: number; quantidade_unidades: number }[] | null;
+}
+
+interface ProdutoComplementarListResponse {
+  items: ProdutoComplementar[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+interface MinimoNaoAtingidoDetail {
+  code: 'MIN_ORDER_NOT_REACHED';
+  atacadista_id: string;
+  atacadista_nome: string;
+  valor_total_atual: number;
+  pedido_minimo: number;
+  faltante: number;
+  message: string;
+}
+
 const formatCurrency = (value: number | null | undefined) => {
   const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
@@ -101,8 +134,15 @@ export function CartPage() {
     Record<string, string>
   >({});
   const [isFinalizando, setIsFinalizando] = useState(false);
+  const [minimoDetail, setMinimoDetail] = useState<MinimoNaoAtingidoDetail | null>(null);
+  const [produtosComplementares, setProdutosComplementares] = useState<ProdutoComplementar[]>([]);
+  const [isLoadingComplementares, setIsLoadingComplementares] = useState(false);
+  const [selectedUnitById, setSelectedUnitById] = useState<Record<string, string>>({});
+  const [selectedQtyById, setSelectedQtyById] = useState<Record<string, number>>({});
+  const [isAddingComplementar, setIsAddingComplementar] = useState<string | null>(null);
 
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const loadCarrinho = async () => {
     try {
@@ -275,6 +315,102 @@ export function CartPage() {
     });
   }, [carrinho?.condicoes_pagamento_por_atacadista, itensAgrupadosPorAtacadista]);
 
+  const carregarProdutosComplementares = async (atacadistaId: string) => {
+    try {
+      setIsLoadingComplementares(true);
+      const { data } = await api.get<ProdutoComplementarListResponse>('/produtos/', {
+        params: {
+          atacadista_id: atacadistaId,
+          page: 1,
+          page_size: 20,
+        },
+      });
+
+      const items = data.items ?? [];
+      setProdutosComplementares(items);
+
+      setSelectedUnitById((prev) => {
+        const next = { ...prev };
+        for (const produto of items) {
+          const firstUnit = Array.isArray(produto.precos) ? produto.precos[0]?.unidade : '';
+          if (firstUnit && !next[produto.id]) {
+            next[produto.id] = firstUnit;
+          }
+        }
+        return next;
+      });
+      setSelectedQtyById((prev) => {
+        const next = { ...prev };
+        for (const produto of items) {
+          if (!next[produto.id]) {
+            next[produto.id] = 1;
+          }
+        }
+        return next;
+      });
+    } catch (err: any) {
+      const message = err?.response?.data?.detail ?? 'Nao foi possivel carregar produtos sugeridos.';
+      toast({
+        title: 'Erro ao carregar sugestoes',
+        description: message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingComplementares(false);
+    }
+  };
+
+  const abrirComplementoPedidoMinimo = async (detail: MinimoNaoAtingidoDetail) => {
+    setMinimoDetail(detail);
+    onOpen();
+    await carregarProdutosComplementares(detail.atacadista_id);
+  };
+
+  const adicionarProdutoComplementar = async (produto: ProdutoComplementar) => {
+    const precos = Array.isArray(produto.precos) ? produto.precos : [];
+    const unidade = selectedUnitById[produto.id] ?? precos[0]?.unidade ?? null;
+    const quantidade = selectedQtyById[produto.id] ?? 1;
+    if (!unidade) {
+      toast({
+        title: 'Produto sem unidade disponivel',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      setIsAddingComplementar(produto.id);
+      await api.post('/carrinho/itens', {
+        produto_id: produto.id,
+        atacadista_id: produto.atacadista_id,
+        quantidade,
+        unidade_medida: unidade,
+      });
+      await loadCarrinho();
+      toast({
+        title: 'Produto adicionado ao carrinho',
+        status: 'success',
+        duration: 2500,
+        isClosable: true,
+      });
+    } catch (err: any) {
+      const message = err?.response?.data?.detail ?? 'Nao foi possivel adicionar o produto.';
+      toast({
+        title: 'Erro ao adicionar produto',
+        description: message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsAddingComplementar(null);
+    }
+  };
+
   const handleFinalizar = async () => {
     if (!carrinho || !carrinho.itens.length) {
       toast({
@@ -327,7 +463,16 @@ export function CartPage() {
       // Apos finalizar, recarrega carrinho
       await loadCarrinho();
     } catch (err: any) {
-      const message = err?.response?.data?.detail ?? 'Nao foi possivel finalizar o carrinho.';
+      const detail = err?.response?.data?.detail;
+      if (detail?.code === 'MIN_ORDER_NOT_REACHED') {
+        await abrirComplementoPedidoMinimo(detail as MinimoNaoAtingidoDetail);
+        return;
+      }
+
+      const message =
+        typeof detail === 'string'
+          ? detail
+          : detail?.message ?? 'Nao foi possivel finalizar o carrinho.';
       toast({
         title: 'Erro ao finalizar carrinho',
         description: message,
@@ -632,6 +777,99 @@ export function CartPage() {
           </Button>
         </Box>
       </Stack>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="xl" scrollBehavior="inside">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Complete o pedido minimo</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {minimoDetail && (
+              <Box mb={4}>
+                <Text fontSize="sm" color="gray.600">
+                  Fornecedor
+                </Text>
+                <Text fontWeight="semibold">{minimoDetail.atacadista_nome}</Text>
+                <Text fontSize="sm" color="gray.600" mt={2}>
+                  Atual: {formatCurrency(minimoDetail.valor_total_atual)} | Minimo:{' '}
+                  {formatCurrency(minimoDetail.pedido_minimo)}
+                </Text>
+                <Text fontSize="sm" color="orange.500" fontWeight="medium">
+                  Faltam {formatCurrency(minimoDetail.faltante)} para fechar.
+                </Text>
+              </Box>
+            )}
+
+            {isLoadingComplementares ? (
+              <Text>Carregando produtos...</Text>
+            ) : produtosComplementares.length === 0 ? (
+              <Text color="gray.500">Nao encontramos produtos desse fornecedor.</Text>
+            ) : (
+              <Stack spacing={3}>
+                {produtosComplementares.map((produto) => (
+                  <Box key={produto.id} borderWidth="1px" borderRadius="md" p={3}>
+                    <Text fontWeight="semibold" fontSize="sm" mb={2}>
+                      {produto.descricao}
+                    </Text>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={2}>
+                      <Select
+                        size="sm"
+                        value={selectedUnitById[produto.id] ?? ''}
+                        onChange={(e) =>
+                          setSelectedUnitById((prev) => ({
+                            ...prev,
+                            [produto.id]: e.target.value,
+                          }))
+                        }
+                      >
+                        {(produto.precos ?? []).map((preco) => (
+                          <option key={preco.unidade} value={preco.unidade}>
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}) -{' '}
+                            {formatCurrency(preco.preco)}
+                          </option>
+                        ))}
+                      </Select>
+
+                      <NumberInput
+                        size="sm"
+                        min={1}
+                        max={100}
+                        value={selectedQtyById[produto.id] ?? 1}
+                        onChange={(_, valueAsNumber) =>
+                          setSelectedQtyById((prev) => ({
+                            ...prev,
+                            [produto.id]: Number.isFinite(valueAsNumber) ? valueAsNumber : 1,
+                          }))
+                        }
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+
+                      <Button
+                        size="sm"
+                        colorScheme="brand"
+                        onClick={() => adicionarProdutoComplementar(produto)}
+                        isLoading={isAddingComplementar === produto.id}
+                      >
+                        Adicionar
+                      </Button>
+                    </SimpleGrid>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" onClick={onClose}>
+              Fechar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

@@ -300,12 +300,27 @@ class CarrinhoService:
             valor_total = round(sum(i["subtotal"] for i in itens), 2)
 
             if valor_total < pedido_minimo:
+                faltante = round(pedido_minimo - valor_total, 2)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        f"Pedido minimo para o atacadista {atacadista.get('nome_fantasia', atacadista_id)} "
-                        f"nao atingido: R$ {valor_total:.2f}/{pedido_minimo:.2f}"
-                    ),
+                    detail={
+                        "code": "MIN_ORDER_NOT_REACHED",
+                        "atacadista_id": atacadista_id,
+                        "atacadista_nome": (
+                            atacadista.get("nome_fantasia")
+                            or atacadista.get("razao_social")
+                            or atacadista.get("nome")
+                            or atacadista_id
+                        ),
+                        "valor_total_atual": valor_total,
+                        "pedido_minimo": pedido_minimo,
+                        "faltante": faltante,
+                        "message": (
+                            f"Pedido minimo para o atacadista "
+                            f"{atacadista.get('nome_fantasia', atacadista_id)} nao atingido: "
+                            f"R$ {valor_total:.2f}/{pedido_minimo:.2f}"
+                        ),
+                    },
                 )
 
             endereco_id = endereco_map[atacadista_id]
