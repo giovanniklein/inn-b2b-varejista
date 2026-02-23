@@ -11,6 +11,7 @@ interface MeResponse {
   user: UserInfo;
   varejista_razao_social?: string | null;
   varejista_nome_fantasia?: string | null;
+  varejista_cnpj?: string | null;
   varejista_id: string;
 }
 
@@ -20,6 +21,7 @@ interface AuthState {
   user: UserInfo | null;
   varejistaRazaoSocial: string | null;
   varejistaNomeFantasia: string | null;
+  varejistaCnpj: string | null;
   isAuthenticated: boolean;
   setSession: (tokens: { access_token: string; refresh_token: string; expires_in?: number }) => void;
   setMe: (me: MeResponse) => void;
@@ -32,6 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   varejistaRazaoSocial: null,
   varejistaNomeFantasia: null,
+  varejistaCnpj: null,
   isAuthenticated: !!localStorage.getItem('pinn_varejista_access_token'),
 
   setSession: ({ access_token, refresh_token }) => {
@@ -50,6 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: me.user,
       varejistaRazaoSocial: me.varejista_razao_social ?? null,
       varejistaNomeFantasia: me.varejista_nome_fantasia ?? me.varejista_razao_social ?? null,
+      varejistaCnpj: me.varejista_cnpj ?? null,
     });
   },
 
@@ -63,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       varejistaRazaoSocial: null,
       varejistaNomeFantasia: null,
+      varejistaCnpj: null,
       isAuthenticated: false,
     });
   },

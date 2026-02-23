@@ -60,7 +60,14 @@ export function MainLayout() {
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   const navigate = useNavigate();
-  const { clearSession, user, varejistaNomeFantasia } = useAuthStore();
+  const { clearSession, user, varejistaNomeFantasia, varejistaCnpj } = useAuthStore();
+
+  const formatCnpj = (value: string | null | undefined) => {
+    if (!value) return null;
+    const digits = value.replace(/\D/g, '');
+    if (digits.length !== 14) return value;
+    return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  };
 
   const handleLogout = () => {
     clearSession();
@@ -89,10 +96,15 @@ export function MainLayout() {
               <Text
                 fontSize={{ base: 'xs', md: 'sm' }}
                 color="gray.500"
-                display={{ base: 'none', md: 'block' }}
+                display={{ base: 'block', md: 'block' }}
               >
                 {varejistaNomeFantasia ?? 'Portal do varejista'}
               </Text>
+              {varejistaCnpj && (
+                <Text fontSize="xs" color="gray.500">
+                  CNPJ: {formatCnpj(varejistaCnpj)}
+                </Text>
+              )}
             </Box>
           </HStack>
 

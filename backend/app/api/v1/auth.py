@@ -79,6 +79,7 @@ async def get_me(
         user=user_response,
         varejista_razao_social=varejista.get("razao_social"),
         varejista_nome_fantasia=varejista.get("nome_fantasia"),
+        varejista_cnpj=varejista.get("cnpj"),
         varejista_id=str(varejista["_id"]),
     )
 

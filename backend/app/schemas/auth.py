@@ -97,4 +97,5 @@ class MeResponse(BaseModel):
     user: UserResponse
     varejista_razao_social: Optional[str] = None
     varejista_nome_fantasia: Optional[str] = None
+    varejista_cnpj: Optional[str] = None
     varejista_id: str
