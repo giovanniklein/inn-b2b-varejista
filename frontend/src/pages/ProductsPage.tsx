@@ -167,9 +167,10 @@ export function ProductsPage() {
       <Stack spacing={4} mb={5}>
         <Box>
           <Text
-            fontSize={{ base: 'xl', sm: '2xl' }}
+            fontSize={{ base: 'lg', sm: 'xl', md: '2xl' }}
             fontWeight="bold"
-            whiteSpace="nowrap"
+            lineHeight="short"
+            noOfLines={1}
           >
             A KIPI conecta voce aos melhores produtos
           </Text>
