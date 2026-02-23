@@ -171,7 +171,7 @@ export function ProductsPage() {
             fontWeight="bold"
             whiteSpace="nowrap"
           >
-            Algumas ofertas para voce
+            A KIPI conecta voce aos melhores produtos
           </Text>
           <Text color="gray.500" fontSize="sm">
             Toque na foto para abrir os detalhes e comprar.
