@@ -27,6 +27,7 @@ class PedidoItemResponse(BaseModel):
     produto_id: str
     descricao_produto: str
     unidade: str
+    quantidade_unidades: int = Field(default=1, ge=1)
     quantidade: int = Field(..., ge=1)
     valor_unitario: float = Field(..., ge=0)
     valor_total: float = Field(..., ge=0)

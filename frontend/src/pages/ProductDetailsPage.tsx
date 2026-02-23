@@ -58,6 +58,15 @@ const formatQtdUnidades = (value: number | null | undefined) => {
   return `${safeValue} un`;
 };
 
+const formatPrecoPorUnidade = (preco: number | null | undefined, quantidadeUnidades: number | null | undefined) => {
+  const safePreco = typeof preco === 'number' && Number.isFinite(preco) ? preco : 0;
+  const safeQtd =
+    typeof quantidadeUnidades === 'number' && Number.isFinite(quantidadeUnidades) && quantidadeUnidades > 0
+      ? quantidadeUnidades
+      : 1;
+  return formatCurrency(safePreco / safeQtd);
+};
+
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -214,7 +223,10 @@ export function ProductDetailsPage() {
                     <strong>
                       {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}):
                     </strong>{' '}
-                    {formatCurrency(preco.preco)}
+                    {formatCurrency(preco.preco)}{' '}
+                    <Text as="span" color="gray.500">
+                      ({formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un)
+                    </Text>
                   </Text>
                 ))}
               </Stack>
@@ -226,6 +238,9 @@ export function ProductDetailsPage() {
             <Text fontSize="sm" color="gray.500">
               {selectedUnit ? formatUnidade(selectedUnit) : 'Unidade'} -{' '}
               {formatQtdUnidades(precoSelecionado?.quantidade_unidades)}
+            </Text>
+            <Text fontSize="sm" color="gray.500">
+              Valor por unidade: {formatPrecoPorUnidade(precoSelecionado?.preco, precoSelecionado?.quantidade_unidades)}
             </Text>
 
             <Stack direction={{ base: 'column', sm: 'row' }} spacing={3}>
@@ -240,7 +255,8 @@ export function ProductDetailsPage() {
                 >
                   {precos.map((preco) => (
                     <option key={preco.unidade} value={preco.unidade}>
-                      {formatUnidade(preco.unidade)}
+                      {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}) -{' '}
+                      {formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un
                     </option>
                   ))}
                 </Select>

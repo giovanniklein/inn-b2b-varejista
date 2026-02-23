@@ -42,6 +42,7 @@ interface PedidoItem {
   produto_id: string;
   descricao_produto: string;
   unidade: string;
+  quantidade_unidades?: number;
   quantidade: number;
   valor_unitario: number;
   valor_total: number;
@@ -73,6 +74,18 @@ const formatPedidoCodigo = (id?: string) => {
   if (!id) return 'PED-';
   const suffix = id.slice(-6).toUpperCase();
   return `PED-${suffix}`;
+};
+
+const formatPrecoPorUnidade = (
+  preco: number | null | undefined,
+  quantidadeUnidades: number | null | undefined,
+) => {
+  const safePreco = typeof preco === 'number' && Number.isFinite(preco) ? preco : 0;
+  const safeQtd =
+    typeof quantidadeUnidades === 'number' && Number.isFinite(quantidadeUnidades) && quantidadeUnidades > 0
+      ? quantidadeUnidades
+      : 1;
+  return formatCurrency(safePreco / safeQtd);
 };
 
 function StatusBadge({ status }: { status: PedidoStatus }) {
@@ -408,7 +421,12 @@ export function OrderDetailsPage() {
                       <Text color="gray.600">Quantidade</Text>
                       <Text textAlign="right">{item.quantidade}</Text>
                       <Text color="gray.600">Valor unitario</Text>
-                      <Text textAlign="right">{formatCurrency(item.valor_unitario)}</Text>
+                      <Text textAlign="right">
+                        {formatCurrency(item.valor_unitario)}
+                        <Text as="span" color="gray.500">
+                          {' '}({formatPrecoPorUnidade(item.valor_unitario, item.quantidade_unidades)}/un)
+                        </Text>
+                      </Text>
                       <Text color="gray.600">Subtotal</Text>
                       <Text textAlign="right" fontWeight="semibold">
                         {formatCurrency(item.valor_total)}
@@ -441,7 +459,12 @@ export function OrderDetailsPage() {
                       </Td>
                       <Td>{item.unidade}</Td>
                       <Td isNumeric>{item.quantidade}</Td>
-                      <Td isNumeric>{formatCurrency(item.valor_unitario)}</Td>
+                      <Td isNumeric>
+                        <Text>{formatCurrency(item.valor_unitario)}</Text>
+                        <Text fontSize="xs" color="gray.500">
+                          {formatPrecoPorUnidade(item.valor_unitario, item.quantidade_unidades)}/un
+                        </Text>
+                      </Td>
                       <Td isNumeric>{formatCurrency(item.valor_total)}</Td>
                     </Tr>
                   ))}

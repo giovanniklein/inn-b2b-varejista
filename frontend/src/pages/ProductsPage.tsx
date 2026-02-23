@@ -132,6 +132,14 @@ export function ProductsPage() {
     return `${safeValue} un`;
   };
 
+  const formatPrecoPorUnidade = (preco: number, quantidadeUnidades: number | null | undefined) => {
+    const qtd =
+      typeof quantidadeUnidades === 'number' && Number.isFinite(quantidadeUnidades) && quantidadeUnidades > 0
+        ? quantidadeUnidades
+        : 1;
+    return formatCurrency(preco / qtd);
+  };
+
   useEffect(() => {
     if (!sentinel) return;
 
@@ -257,7 +265,10 @@ export function ProductsPage() {
                           <strong>
                             {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}):
                           </strong>{' '}
-                          {formatCurrency(preco.preco)}
+                          {formatCurrency(preco.preco)}{' '}
+                          <Text as="span" color="gray.500">
+                            ({formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un)
+                          </Text>
                         </Text>
                       ))}
                     </Stack>

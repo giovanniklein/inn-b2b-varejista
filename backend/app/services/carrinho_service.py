@@ -343,6 +343,10 @@ class CarrinhoService:
                         "produto_id": item["produto_id"],
                         "descricao_produto": await self._get_descricao_produto(item["produto_id"]),
                         "unidade": item["unidade_medida"],
+                        "quantidade_unidades": await self._get_quantidade_unidades_produto(
+                            item["produto_id"],
+                            item["unidade_medida"],
+                        ),
                         "quantidade": item["quantidade"],
                         "valor_unitario": item["preco_unitario"],
                         "valor_total": item["subtotal"],
@@ -549,6 +553,26 @@ class CarrinhoService:
         if not produto:
             return ""
         return produto.get("descricao", "")
+
+    async def _get_quantidade_unidades_produto(self, produto_id: str, unidade: str) -> int:
+        produto = await self.produto_repo.find_by_id(produto_id)
+        if not produto:
+            return 1
+
+        precos = produto.get("precos") or []
+        for item in precos:
+            if item.get("unidade") == unidade:
+                quantidade_unidades_raw = (
+                    item.get("quantidade_unidades")
+                    or item.get("qtd_unidades")
+                    or 1
+                )
+                try:
+                    return max(int(quantidade_unidades_raw), 1)
+                except (TypeError, ValueError):
+                    return 1
+
+        return 1
 
     def _normalize_condicoes_pagamento(self, atacadista_doc: Dict) -> List[str]:
         condicoes_raw = atacadista_doc.get("condicoes_pagamento") or ["A VISTA"]

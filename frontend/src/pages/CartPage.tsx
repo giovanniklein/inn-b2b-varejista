@@ -124,6 +124,18 @@ const formatQtdUnidades = (value: number | null | undefined) => {
   return `${safeValue} un`;
 };
 
+const formatPrecoPorUnidade = (
+  preco: number | null | undefined,
+  quantidadeUnidades: number | null | undefined,
+) => {
+  const safePreco = typeof preco === 'number' && Number.isFinite(preco) ? preco : 0;
+  const safeQtd =
+    typeof quantidadeUnidades === 'number' && Number.isFinite(quantidadeUnidades) && quantidadeUnidades > 0
+      ? quantidadeUnidades
+      : 1;
+  return formatCurrency(safePreco / safeQtd);
+};
+
 export function CartPage() {
   const [carrinho, setCarrinho] = useState<CarrinhoResponse | null>(null);
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
@@ -485,6 +497,11 @@ export function CartPage() {
     }
   };
 
+  const getQtdUnidadesItem = (item: CarrinhoItem) => {
+    const opt = item.precos.find((preco) => preco.unidade === item.unidade_medida);
+    return opt?.quantidade_unidades ?? 1;
+  };
+
   if (!carrinho || carrinho.itens.length === 0) {
     return (
       <Box>
@@ -604,7 +621,8 @@ export function CartPage() {
                       >
                         {item.precos.map((preco) => (
                           <option key={preco.unidade} value={preco.unidade}>
-                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)})
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}) -{' '}
+                            {formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un
                           </option>
                         ))}
                       </Select>
@@ -638,6 +656,9 @@ export function CartPage() {
                         Preco
                       </Text>
                       <Text fontWeight="semibold">{formatCurrency(item.preco_unitario)}</Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {formatPrecoPorUnidade(item.preco_unitario, getQtdUnidadesItem(item))}/un
+                      </Text>
                     </Box>
                     <Box>
                       <Text fontSize="xs" color="gray.500" mb={1}>
@@ -696,7 +717,8 @@ export function CartPage() {
                       >
                         {item.precos.map((preco) => (
                           <option key={preco.unidade} value={preco.unidade}>
-                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)})
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}) -{' '}
+                            {formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un
                           </option>
                         ))}
                       </Select>
@@ -723,7 +745,12 @@ export function CartPage() {
                         </NumberInputStepper>
                       </NumberInput>
                     </Td>
-                    <Td isNumeric>{formatCurrency(item.preco_unitario)}</Td>
+                    <Td isNumeric>
+                      <Text>{formatCurrency(item.preco_unitario)}</Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {formatPrecoPorUnidade(item.preco_unitario, getQtdUnidadesItem(item))}/un
+                      </Text>
+                    </Td>
                     <Td isNumeric>{formatCurrency(item.subtotal)}</Td>
                     <Td isNumeric>
                       <Button
@@ -825,7 +852,7 @@ export function CartPage() {
                         {(produto.precos ?? []).map((preco) => (
                           <option key={preco.unidade} value={preco.unidade}>
                             {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}) -{' '}
-                            {formatCurrency(preco.preco)}
+                            {formatCurrency(preco.preco)} ({formatPrecoPorUnidade(preco.preco, preco.quantidade_unidades)}/un)
                           </option>
                         ))}
                       </Select>

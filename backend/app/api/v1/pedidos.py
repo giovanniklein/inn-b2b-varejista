@@ -144,6 +144,7 @@ async def obter_pedido(
                 produto_id=str(item.get("produto_id")),
                 descricao_produto=item.get("descricao_produto", ""),
                 unidade=item.get("unidade"),
+                quantidade_unidades=int(item.get("quantidade_unidades", 1) or 1),
                 quantidade=int(item.get("quantidade", 0)),
                 valor_unitario=float(item.get("valor_unitario", 0.0)),
                 valor_total=float(item.get("valor_total", 0.0)),
