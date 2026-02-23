@@ -23,6 +23,7 @@ interface Produto {
   codigo: string;
   descricao: string;
   imagem_base64?: string | null;
+  precos?: { unidade: string; preco: number; quantidade_unidades: number }[] | null;
 }
 
 interface ProdutoListResponse {
@@ -108,6 +109,26 @@ export function ProductsPage() {
   };
 
   const hasMore = useMemo(() => page < totalPages, [page, totalPages]);
+  const isFiltroAtivo = useMemo(() => searchTerm.trim().length > 0, [searchTerm]);
+
+  const formatCurrency = (value: number | null | undefined) => {
+    const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+      safeValue,
+    );
+  };
+
+  const formatUnidade = (value: string) => {
+    if (!value) return value;
+    if (value.length <= 3) return value.toUpperCase();
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const formatQtdUnidades = (value: number | null | undefined) => {
+    const safeValue =
+      typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 1;
+    return `${safeValue} un`;
+  };
 
   useEffect(() => {
     if (!sentinel) return;
@@ -175,7 +196,10 @@ export function ProductsPage() {
 
       {items.length > 0 && (
         <>
-          <SimpleGrid columns={{ base: 2, sm: 2, md: 3, lg: 4 }} spacing={{ base: 3, md: 4 }}>
+          <SimpleGrid
+            columns={isFiltroAtivo ? { base: 1, md: 2 } : { base: 2, sm: 2, md: 3, lg: 4 }}
+            spacing={{ base: 3, md: 4 }}
+          >
             {items.map((produto) => (
               <Box
                 key={produto.id}
@@ -210,6 +234,25 @@ export function ProductsPage() {
                       Sem imagem
                     </Text>
                   </Flex>
+                )}
+
+                {isFiltroAtivo && (
+                  <Box p={3}>
+                    <Text fontSize="sm" fontWeight="semibold" noOfLines={2} mb={2}>
+                      {produto.descricao}
+                    </Text>
+
+                    <Stack spacing={1}>
+                      {(Array.isArray(produto.precos) ? produto.precos : []).map((preco) => (
+                        <Text key={preco.unidade} fontSize="xs" color="gray.700">
+                          <strong>
+                            {formatUnidade(preco.unidade)} ({formatQtdUnidades(preco.quantidade_unidades)}):
+                          </strong>{' '}
+                          {formatCurrency(preco.preco)}
+                        </Text>
+                      ))}
+                    </Stack>
+                  </Box>
                 )}
               </Box>
             ))}
