@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
@@ -114,6 +115,11 @@ class VarejistaRepository:
     async def find_by_cnpj(self, cnpj: str) -> Optional[Dict[str, Any]]:
         return await self._collection.find_one({"cnpj": cnpj})
 
+    async def find_by_email_ci(self, email: str) -> Optional[Dict[str, Any]]:
+        return await self._collection.find_one(
+            {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+        )
+
     async def insert(self, data: Dict[str, Any]) -> str:
         result = await self._collection.insert_one(data)
         return str(result.inserted_id)
@@ -186,6 +192,11 @@ class VarejistaUsuarioRepository:
         """
 
         return await self._collection.find_one({"email": email})
+
+    async def find_by_email_any_tipo_ci(self, email: str) -> Optional[Dict[str, Any]]:
+        return await self._collection.find_one(
+            {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+        )
 
     async def find_varejista_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         return await self._collection.find_one(

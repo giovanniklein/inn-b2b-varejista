@@ -40,6 +40,8 @@ class AuthService:
         - Retorna par de tokens (access + refresh)
         """
 
+        email_normalizado = payload.email.strip().lower()
+
         # Garante CNPJ único entre varejistas
         existing = await self.varejista_repo.find_by_cnpj(payload.cnpj)
         if existing:
@@ -48,8 +50,16 @@ class AuthService:
                 detail="Já existe um varejista com este CNPJ",
             )
 
+        # Garante e-mail único entre varejistas
+        existing_varejista_email = await self.varejista_repo.find_by_email_ci(email_normalizado)
+        if existing_varejista_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Já existe um varejista cadastrado com este e-mail",
+            )
+
         # Garante email único na coleção de usuários
-        existing_user = await self.usuario_repo.find_by_email_any_tipo(payload.email)
+        existing_user = await self.usuario_repo.find_by_email_any_tipo_ci(email_normalizado)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -97,7 +107,7 @@ class AuthService:
 
         varejista_doc = {
             "cnpj": payload.cnpj,
-            "email": payload.email or cnpj_data.get("email"),
+            "email": email_normalizado,
             "telefone": payload.telefone or cnpj_data.get("telefone"),
             "razao_social": cnpj_data.get("razao_social"),
             "nome_fantasia": cnpj_data.get("nome_fantasia"),
@@ -113,7 +123,7 @@ class AuthService:
             "tipo_usuario": "varejista",
             "varejista_id": varejista_id,
             "nome": cnpj_data.get("nome_fantasia") or cnpj_data.get("razao_social"),
-            "email": payload.email,
+            "email": email_normalizado,
             "telefone": payload.telefone or cnpj_data.get("telefone"),
             "senha_hash": get_password_hash(payload.senha),
             "is_admin": True,
@@ -127,7 +137,7 @@ class AuthService:
     async def login(self, payload: AuthLoginRequest) -> TokenPair:
         """Autentica o usuário via e-mail/senha e retorna tokens JWT."""
 
-        user = await self.usuario_repo.find_varejista_by_email(payload.identifier)
+        user = await self.usuario_repo.find_varejista_by_email(payload.identifier.strip().lower())
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
