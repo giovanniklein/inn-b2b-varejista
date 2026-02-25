@@ -271,15 +271,24 @@ class ProdutoLeituraRepository:
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 100,
         skip: int = 0,
+        projection: Optional[Dict[str, int]] = None,
     ) -> List[Dict[str, Any]]:
         query: Dict[str, Any] = filters or {}
-        cursor = self._collection.find(query).skip(skip).limit(limit)
+        cursor = self._collection.find(query, projection).skip(skip).limit(limit)
         return [doc async for doc in cursor]
 
-    async def find_by_id(self, produto_id: str) -> Optional[Dict[str, Any]]:
-        return await self._collection.find_one({"_id": ObjectId(produto_id)})
+    async def find_by_id(
+        self,
+        produto_id: str,
+        projection: Optional[Dict[str, int]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        return await self._collection.find_one({"_id": ObjectId(produto_id)}, projection)
 
-    async def find_by_ids(self, produto_ids: list[str]) -> List[Dict[str, Any]]:
+    async def find_by_ids(
+        self,
+        produto_ids: list[str],
+        projection: Optional[Dict[str, int]] = None,
+    ) -> List[Dict[str, Any]]:
         if not produto_ids:
             return []
         object_ids: list[ObjectId] = []
@@ -290,7 +299,7 @@ class ProdutoLeituraRepository:
                 continue
         if not object_ids:
             return []
-        cursor = self._collection.find({"_id": {"$in": object_ids}})
+        cursor = self._collection.find({"_id": {"$in": object_ids}}, projection)
         return [doc async for doc in cursor]
 
 

@@ -25,6 +25,16 @@ from app.schemas.carrinho import (
     PedidoGeradoResumo,
 )
 
+PRODUTO_CARRINHO_PROJECTION = {
+    "_id": 1,
+    "atacadista_id": 1,
+    "descricao": 1,
+    "precos": 1,
+    "preco_unidade": 1,
+    "preco_caixa": 1,
+    "preco_palete": 1,
+}
+
 
 class CarrinhoService:
     """Regras de negocio para o carrinho multi-atacadista do varejista."""
@@ -97,7 +107,10 @@ class CarrinhoService:
     ) -> CarrinhoResponse:
         """Adiciona um item ao carrinho ou atualiza sua quantidade."""
 
-        produto = await self.produto_repo.find_by_id(payload.produto_id)
+        produto = await self.produto_repo.find_by_id(
+            payload.produto_id,
+            projection=PRODUTO_CARRINHO_PROJECTION,
+        )
         if not produto:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -187,7 +200,10 @@ class CarrinhoService:
                     break
 
                 unidade = payload.unidade_medida or item["unidade_medida"]
-                produto = await self.produto_repo.find_by_id(produto_id)
+                produto = await self.produto_repo.find_by_id(
+                    produto_id,
+                    projection=PRODUTO_CARRINHO_PROJECTION,
+                )
                 if not produto:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -455,7 +471,10 @@ class CarrinhoService:
             if not produto_id or not unidade or quantidade <= 0:
                 continue
 
-            produto = await self.produto_repo.find_by_id(produto_id)
+            produto = await self.produto_repo.find_by_id(
+                produto_id,
+                projection=PRODUTO_CARRINHO_PROJECTION,
+            )
             if not produto:
                 continue
 
@@ -523,7 +542,13 @@ class CarrinhoService:
         return float(preco)
 
     async def _get_precos_produto(self, produto_id: str) -> List[Dict]:
-        produto = await self.produto_repo.find_by_id(produto_id)
+        produto = await self.produto_repo.find_by_id(
+            produto_id,
+            projection=PRODUTO_CARRINHO_PROJECTION,
+        )
+        return self._extract_precos_produto(produto)
+
+    def _extract_precos_produto(self, produto: Dict | None) -> List[Dict]:
         if not produto:
             return []
 
@@ -579,13 +604,19 @@ class CarrinhoService:
         return precos
 
     async def _get_descricao_produto(self, produto_id: str) -> str:
-        produto = await self.produto_repo.find_by_id(produto_id)
+        produto = await self.produto_repo.find_by_id(
+            produto_id,
+            projection={"descricao": 1},
+        )
         if not produto:
             return ""
         return produto.get("descricao", "")
 
     async def _get_quantidade_unidades_produto(self, produto_id: str, unidade: str) -> int:
-        produto = await self.produto_repo.find_by_id(produto_id)
+        produto = await self.produto_repo.find_by_id(
+            produto_id,
+            projection={"precos": 1},
+        )
         if not produto:
             return 1
 
