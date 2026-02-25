@@ -30,7 +30,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '../api/client';
 
@@ -152,6 +152,7 @@ export function CartPage() {
   const [selectedUnitById, setSelectedUnitById] = useState<Record<string, string>>({});
   const [selectedQtyById, setSelectedQtyById] = useState<Record<string, number>>({});
   const [isAddingComplementar, setIsAddingComplementar] = useState<string | null>(null);
+  const pendingUpdateTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -272,6 +273,30 @@ export function CartPage() {
       [atacadistaId]: enderecoId,
     }));
   };
+
+  const scheduleAlterarItem = (
+    produtoId: string,
+    quantidade: number,
+    unidade_medida: CarrinhoItem['unidade_medida'],
+  ) => {
+    const key = `${produtoId}:${unidade_medida}`;
+    const existing = pendingUpdateTimers.current[key];
+    if (existing) {
+      clearTimeout(existing);
+    }
+    pendingUpdateTimers.current[key] = setTimeout(() => {
+      void handleAlterarItem(produtoId, quantidade, unidade_medida);
+      delete pendingUpdateTimers.current[key];
+    }, 250);
+  };
+
+  useEffect(
+    () => () => {
+      Object.values(pendingUpdateTimers.current).forEach((timer) => clearTimeout(timer));
+      pendingUpdateTimers.current = {};
+    },
+    [],
+  );
 
   const handleSelecionarCondicaoPagamento = (atacadistaId: string, condicao: string) => {
     setCondicoesPagamentoSelecionadas((prev) => ({
@@ -637,7 +662,7 @@ export function CartPage() {
                         max={100}
                         value={item.quantidade}
                         onChange={(_, valueAsNumber) =>
-                          handleAlterarItem(
+                          scheduleAlterarItem(
                             item.produto_id,
                             Number.isFinite(valueAsNumber) ? valueAsNumber : 1,
                             item.unidade_medida,
@@ -730,7 +755,7 @@ export function CartPage() {
                         max={100}
                         value={item.quantidade}
                         onChange={(_, valueAsNumber) =>
-                          handleAlterarItem(
+                          scheduleAlterarItem(
                             item.produto_id,
                             Number.isFinite(valueAsNumber) ? valueAsNumber : 1,
                             item.unidade_medida,

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import auth, carrinho, enderecos, pedidos, produtos
 from app.core.config import get_settings
 from app.core.database import close_client, get_client
+from app.core.indexes import ensure_indexes
 from app.seed.initial_data import seed_initial_data
 
 
@@ -17,23 +18,29 @@ settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa: D401
-    """Lifespan handler para gerenciar recursos na inicialização/encerramento.
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle.
 
-    - Garante criação do client MongoDB (lazy) via get_client()
-    - Executa seeds iniciais do varejista (idempotente)
-    - Fecha o client MongoDB ao encerrar
+    - create Mongo client early
+    - ensure required indexes
+    - run idempotent seeds
+    - close Mongo client on shutdown
     """
 
-    # Força criação do client (lazy) apenas para falhar cedo em caso de erro
-    await get_client()
+    client = await get_client()
+    db = client[settings.mongodb_database]
 
-    logger.info("[startup] Executando seeds iniciais do varejista...")
+    try:
+        await ensure_indexes(db)
+    except Exception:  # noqa: BLE001
+        logger.exception("[startup] Failed to create indexes.")
+
+    logger.info("[startup] Running varejista seeds...")
     try:
         await seed_initial_data()
-        logger.info("[startup] Seeds do varejista executados com sucesso.")
+        logger.info("[startup] Seeds completed.")
     except Exception:  # noqa: BLE001
-        logger.exception("[startup] Falha ao executar seeds iniciais do varejista.")
+        logger.exception("[startup] Failed to run seeds.")
 
     yield
 
@@ -45,7 +52,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
@@ -54,8 +60,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# API routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(enderecos.router, prefix="/enderecos", tags=["enderecos"])
 app.include_router(produtos.router, prefix="/produtos", tags=["produtos"])
@@ -65,6 +69,4 @@ app.include_router(pedidos.router, prefix="/pedidos", tags=["pedidos"])
 
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
-    """Health-check simples para monitoramento."""
-
     return {"status": "ok"}

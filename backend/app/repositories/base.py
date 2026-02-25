@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
 from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
+from pymongo.errors import DuplicateKeyError
 
 
 class VarejistaMultiTenantRepository:
@@ -212,12 +214,28 @@ class CarrinhoRepository(VarejistaMultiTenantRepository):
         return await self._collection.find_one({"varejista_id": varejista_id})
 
     async def upsert_carrinho(self, varejista_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        result = await self._collection.find_one_and_update(
-            {"varejista_id": varejista_id},
-            {"$set": data},
-            upsert=True,
-            return_document=True,  # type: ignore[arg-type]
-        )
+        # Nunca envia _id no $set para evitar erro de campo imutavel no MongoDB.
+        safe_data = {k: v for k, v in data.items() if k != "_id"}
+        safe_data["varejista_id"] = varejista_id
+        try:
+            result = await self._collection.find_one_and_update(
+                {"varejista_id": varejista_id},
+                {
+                    "$set": safe_data,
+                    "$setOnInsert": {"criado_em": datetime.utcnow()},
+                },
+                upsert=True,
+                return_document=True,  # type: ignore[arg-type]
+            )
+        except DuplicateKeyError:
+            # Corrida de insert simultaneo: um request criou e o outro repete.
+            # Faz retry sem upsert para manter operacao idempotente.
+            result = await self._collection.find_one_and_update(
+                {"varejista_id": varejista_id},
+                {"$set": safe_data},
+                upsert=False,
+                return_document=True,  # type: ignore[arg-type]
+            )
         assert result is not None
         return result
 
@@ -260,6 +278,20 @@ class ProdutoLeituraRepository:
 
     async def find_by_id(self, produto_id: str) -> Optional[Dict[str, Any]]:
         return await self._collection.find_one({"_id": ObjectId(produto_id)})
+
+    async def find_by_ids(self, produto_ids: list[str]) -> List[Dict[str, Any]]:
+        if not produto_ids:
+            return []
+        object_ids: list[ObjectId] = []
+        for produto_id in produto_ids:
+            try:
+                object_ids.append(ObjectId(produto_id))
+            except (InvalidId, TypeError):
+                continue
+        if not object_ids:
+            return []
+        cursor = self._collection.find({"_id": {"$in": object_ids}})
+        return [doc async for doc in cursor]
 
 
 class AtacadistaLeituraRepository:
